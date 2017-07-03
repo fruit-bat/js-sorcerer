@@ -6,11 +6,11 @@
 
 	</head>
 	<body>
-		<canvas id="exidyScreen" width="512" height="480" style="border:1px solid #ccc;">
+		<canvas id="exidyScreen" width="512" height="480" style="border:10px solid #ccc;border-radius: 8px">
 		</canvas>
-		<canvas id="exidyCharacters" width="2048" height="8" style="border:1px solid #ccc;">
+		<canvas style='display:none' id="exidyCharacters" width="2048" height="8">
 		</canvas>
-		<canvas id="exidyBytes" width="8" height="256" style="border:1px solid #ccc;">
+		<canvas style='display:none' id="exidyBytes" width="8" height="256">
 		</canvas>
 		<script>
 			var main = require(["main"]);
