@@ -151,6 +151,7 @@ class ExidyCharacters extends Ram {
 	private charsCtx : CanvasRenderingContext2D;
 	private byteCanvas : HTMLCanvasElement;
 	private byteCtx : CanvasRenderingContext2D;
+	private charUpdated : (char: number) => void;
 
 	public constructor(
 		memory : DataView,
@@ -163,6 +164,7 @@ class ExidyCharacters extends Ram {
 		this.byteCanvas = byteCanvas;
 		this.byteCtx = byteCanvas.getContext("2d");
 		this.charsCtx = charsCanvas.getContext("2d");
+		this.charUpdated = charUpdated;
 
 		for(let i = 0; i < 256; ++i) {
 			let j = i;
@@ -175,9 +177,9 @@ class ExidyCharacters extends Ram {
 	}
 
 	writeByte(address: number, data: number) : void {
-		if(address >= 0xFC00) {
+		if(address >= 0xFC00 && (data !== this.readByte(address))) {
 			super.writeByte(address, data);
-			this.updateByte(address, data);
+			this.charUpdated(this.updateByte(address, data));
 		}
 	}
 
@@ -189,11 +191,12 @@ class ExidyCharacters extends Ram {
 		}
 	}
 
-	private updateByte(address: number, data: number) : void {
+	private updateByte(address: number, data: number) : number {
 		let offset = address - CHARS_START;
 		let row = offset & 0x7;
 		let char = offset >> 3;
 		this.charsCtx.drawImage(this.byteCanvas, 0, data, 8, 1, char << 3, row, 8, 1);
+		return char;
 	}
 
 	public updateAll() : void {
@@ -228,14 +231,16 @@ class ExidyScreen extends Ram {
 	}
 
 	writeByte(address: number, data: number) : void {
-		super.writeByte(address, data);
-		this.updateByte(address, data);
+		if(data !== this.readByte(address)) {
+			super.writeByte(address, data);
+			this.updateByte(address, data);
+		}
 	}
 
 	writeWord(address: number, data: number) : void {
 		super.writeWord(address, data);
 		this.updateByte(address, data & 0xff);
-		this.updateByte(address, (data >> 8) & 0xff);
+		this.updateByte(address + 1, (data >> 8) & 0xff);
 	}
 
 	private updateByte(address: number, data: number) : void {
@@ -246,11 +251,11 @@ class ExidyScreen extends Ram {
 		this.screenCtx.drawImage(this.charsCanvas, char << 3, 0, 8, 8, col << 3, row << 4, 8, 16);
 	}
 
-	public charUpdated(char: number) : void {
+	public charUpdated(updatedChar: number) : void {
 		for(let address = SCREEN_START; address < SCREEN_START + SCREEN_SIZE_BYTES; ++address) {
 			let char = this.readByte(address);
 			if(updatedChar === char) {
-				updateByte(address, char);
+				this.updateByte(address, char);
 			}
 		}
 	}

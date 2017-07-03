@@ -35,7 +35,7 @@ export default class ExidySorcerer {
 			});
 		})).then(() => {
 			// Load a SNP
-			return filesystem.read('snaps/' + 'galx.snp').then((data) => {
+			return filesystem.read('snaps/' + 'chomp.snp').then((data) => {
 				this.memorySystem.load(data, 0x0000, 28);
 				this.memorySystem.updateCharacters();
 				this.memorySystem.updateScreen();
