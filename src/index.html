@@ -1,0 +1,19 @@
+<html>
+	<head>
+		<script src="http://requirejs.org/docs/release/2.3.3/minified/require.js"></script>
+		<script src="lib/Z80.js"></script>
+		<script src="./build.js" data-main="main"></script>
+
+	</head>
+	<body>
+		<canvas id="exidyScreen" width="512" height="480" style="border:1px solid #ccc;">
+		</canvas>
+		<canvas id="exidyCharacters" width="2048" height="8" style="border:1px solid #ccc;">
+		</canvas>
+		<canvas id="exidyBytes" width="8" height="256" style="border:1px solid #ccc;">
+		</canvas>
+		<script>
+			var main = require(["main"]);
+		</script>
+	</body>
+</html>
