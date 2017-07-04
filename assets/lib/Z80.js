@@ -39,13 +39,13 @@ function Z80(core)
    if (!core || (typeof core.mem_read !== "function") || (typeof core.mem_write !== "function") ||
                 (typeof core.io_read !== "function")  || (typeof core.io_write !== "function"))
       throw("Z80: Core object is missing required functions.");
-   
+
    if (this === window)
       throw("Z80: This function is a constructor; call it using operator new.");
 
    // Obviously we'll be needing the core object's functions again.
    this.core = core;
-   
+
    // All right, let's initialize the registers.
    // First, the standard 8080 registers.
    this.a = 0x00;
@@ -83,7 +83,7 @@ function Z80(core)
    this.imode = 0;
    this.iff1 = 0;
    this.iff2 = 0;
-   
+
    // These are all specific to this implementation, not Z80 features.
    // Keep track of whether we've had a HALT instruction called.
    this.halted = false;
@@ -94,28 +94,64 @@ function Z80(core)
    // This tracks the number of cycles spent in a single instruction run,
    //  including processing any prefixes and handling interrupts.
    this.cycle_counter = 0;
-   
+
    // There's tons of stuff in this object,
    //  but only these three functions are the public API.
    return {
       reset : this.reset.bind(this),
       run_instruction : this.run_instruction.bind(this),
-      interrupt : this.interrupt.bind(this)
+      interrupt : this.interrupt.bind(this),
+      load : this.load.bind(this)
    };
 }
+
+///////////////////////////////////////////////////////////////////////////////
+/// @public load
+///
+/// @brief Initialize the processor with persisted state
+///////////////////////////////////////////////////////////////////////////////
+Z80.prototype.load = function(state)
+{
+   this.reset();
+
+   this.i = state.i;
+   this.a_prime = state.a_prime;
+   this.b_prime = state.b_prime;
+   this.c_prime = state.c_prime;
+   this.d_prime = state.d_prime;
+   this.e_prime = state.e_prime;
+   this.h_prime = state.h_prime;
+   this.l_prime = state.l_prime;
+   this.set_flags_prime(state.f_prime);
+   this.a = state.a;
+   this.b = state.b;
+   this.c = state.c;
+   this.d = state.d;
+   this.e = state.e;
+   this.h = state.h;
+   this.l = state.l;
+   this.ix = state.ix;
+   this.iy = state.iy;
+   this.iff1 = state.iff1
+   this.iff2 = state.iff2
+   this.set_flags_register(state.f);
+   this.r = state.r;
+   this.imode = state.imode;
+   this.pc = state.pc;
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @public reset
 ///
 /// @brief Re-initialize the processor as if a reset or power on had occured
 ///////////////////////////////////////////////////////////////////////////////
-Z80.prototype.reset = function()
+Z80.prototype.reset = function(pc)
 {
    // These registers are the ones that have predictable states
    //  immediately following a power-on or a reset.
    // The others are left alone, because their states are unpredictable.
    this.sp = 0xdff0;
-   this.pc = 0x0000;
+   this.pc = typeof pc === 'undefined' ? 0x000 : pc;
    this.a = 0x00;
    this.r = 0x00;
    this.set_flags_register(0);
@@ -164,12 +200,12 @@ Z80.prototype.run_instruction = function()
       // The high bit of R is not affected by this increment,
       //  it can only be changed using the LD R, A instruction.
       this.r = (this.r & 0x80) | (((this.r & 0x7f) + 1) & 0x7f);
-      
+
       // Read the byte at the PC and run the instruction it encodes.
       var opcode = this.core.mem_read(this.pc);
       this.decode_instruction(opcode);
       this.pc = (this.pc + 1) & 0xffff;
-      
+
       // Actually do the delayed interrupt disable/enable if we have one.
       if (doing_delayed_di)
       {
@@ -181,7 +217,7 @@ Z80.prototype.run_instruction = function()
          this.iff1 = 1;
          this.iff2 = 1;
       }
-      
+
       // And finally clear out the cycle counter for the next instruction
       //  before returning it to the emulator core.
       var retval = this.cycle_counter;
@@ -226,11 +262,11 @@ Z80.prototype.interrupt = function(non_maskable, data)
       // The high bit of R is not affected by this increment,
       //  it can only be changed using the LD R, A instruction.
       this.r = (this.r & 0x80) | (((this.r & 0x7f) + 1) & 0x7f);
-   
+
       this.halted = false;
       this.iff1 = 0;
       this.iff2 = 0;
-   
+
       if (this.imode === 0)
       {
          // In the 8080-compatible interrupt mode,
@@ -254,9 +290,9 @@ Z80.prototype.interrupt = function(non_maskable, data)
          //  but it doesn't appear that this is actually the case on the hardware,
          //  so we don't attempt to enforce that here.
          var vector_address = ((this.i << 8) | data);
-         this.pc = this.core.read_mem_byte(vector_address) | 
+         this.pc = this.core.read_mem_byte(vector_address) |
                    (this.core.read_mem_byte((vector_address + 1) & 0xffff) << 8);
-         
+
          this.cycle_counter += 19;
       }
    }
@@ -297,7 +333,7 @@ Z80.prototype.decode_instruction = function(opcode)
       // This entire range is all 8-bit register loads.
       // Get the operand and assign it to the correct destination.
       var operand = get_operand.call(this, opcode);
-         
+
       if (((opcode & 0x38) >>> 3) === 0)
          this.b = operand;
       else if (((opcode & 0x38) >>> 3) === 1)
@@ -323,7 +359,7 @@ Z80.prototype.decode_instruction = function(opcode)
       var operand = get_operand.call(this, opcode),
           op_array = [this.do_add, this.do_adc, this.do_sub, this.do_sbc,
                       this.do_and, this.do_xor, this.do_or, this.do_cp];
-      
+
       op_array[(opcode & 0x38) >>> 3].call(this, operand);
    }
    else
@@ -333,7 +369,7 @@ Z80.prototype.decode_instruction = function(opcode)
       var func = this.instructions[opcode].bind(this);
       func();
    }
-   
+
    // Update the cycle counter with however many cycles
    //  the base instruction took.
    // If this was a prefixed instruction, then
@@ -440,20 +476,20 @@ Z80.prototype.get_parity = function(value)
    //  but why calculate what you can pre-calculate?
    var parity_bits = [
       1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
-      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 
-      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 
-      1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 
-      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 
-      1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 
-      1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 
-      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 
-      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 
-      1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 
-      1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 
-      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 
-      1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 
-      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 
-      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 
+      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+      1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+      1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+      1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+      1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+      1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+      1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+      0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
       1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1
    ];
    return parity_bits[value];
@@ -568,7 +604,7 @@ Z80.prototype.do_add = function(operand)
    //  so that we can more easily figure out whether we had
    //  an overflow or a carry and set the flags accordingly.
    var result = this.a + operand;
-   
+
    // The great majority of the work for the arithmetic instructions
    //  turns out to be setting the flags rather than the actual operation.
    this.flags.S = (result & 0x80) ? 1 : 0;
@@ -579,7 +615,7 @@ Z80.prototype.do_add = function(operand)
    this.flags.P = ((this.a & 0x80) === (operand & 0x80)) && ((this.a & 0x80) !== (result & 0x80)) ? 1 : 0;
    this.flags.N = 0;
    this.flags.C = (result & 0x100) ? 1 : 0;
-   
+
    this.a = result & 0xff;
    this.update_xy_flags(this.a);
 };
@@ -587,14 +623,14 @@ Z80.prototype.do_add = function(operand)
 Z80.prototype.do_adc = function(operand)
 {
    var result = this.a + operand + this.flags.C;
-   
+
    this.flags.S = (result & 0x80) ? 1 : 0;
    this.flags.Z = !(result & 0xff) ? 1 : 0;
    this.flags.H = (((operand & 0x0f) + (this.a & 0x0f) + this.flags.C) & 0x10) ? 1 : 0;
    this.flags.P = ((this.a & 0x80) === (operand & 0x80)) && ((this.a & 0x80) !== (result & 0x80)) ? 1 : 0;
    this.flags.N = 0;
    this.flags.C = (result & 0x100) ? 1 : 0;
-   
+
    this.a = result & 0xff;
    this.update_xy_flags(this.a);
 };
@@ -602,14 +638,14 @@ Z80.prototype.do_adc = function(operand)
 Z80.prototype.do_sub = function(operand)
 {
    var result = this.a - operand;
-   
+
    this.flags.S = (result & 0x80) ? 1 : 0;
    this.flags.Z = !(result & 0xff) ? 1 : 0;
    this.flags.H = (((this.a & 0x0f) - (operand & 0x0f)) & 0x10) ? 1 : 0;
    this.flags.P = ((this.a & 0x80) !== (operand & 0x80)) && ((this.a & 0x80) !== (result & 0x80)) ? 1 : 0;
    this.flags.N = 1;
    this.flags.C = (result & 0x100) ? 1 : 0;
-   
+
    this.a = result & 0xff;
    this.update_xy_flags(this.a);
 };
@@ -617,14 +653,14 @@ Z80.prototype.do_sub = function(operand)
 Z80.prototype.do_sbc = function(operand)
 {
    var result = this.a - operand - this.flags.C;
-   
+
    this.flags.S = (result & 0x80) ? 1 : 0;
    this.flags.Z = !(result & 0xff) ? 1 : 0;
    this.flags.H = (((this.a & 0x0f) - (operand & 0x0f) - this.flags.C) & 0x10) ? 1 : 0;
    this.flags.P = ((this.a & 0x80) !== (operand & 0x80)) && ((this.a & 0x80) !== (result & 0x80)) ? 1 : 0;
    this.flags.N = 1;
    this.flags.C = (result & 0x100) ? 1 : 0;
-   
+
    this.a = result & 0xff;
    this.update_xy_flags(this.a);
 };
@@ -681,33 +717,33 @@ Z80.prototype.do_xor = function(operand)
 Z80.prototype.do_inc = function(operand)
 {
    var result = operand + 1;
-   
+
    this.flags.S = (result & 0x80) ? 1 : 0;
    this.flags.Z = !(result & 0xff) ? 1 : 0;
    this.flags.H = ((operand & 0x0f) === 0x0f) ? 1 : 0;
    // It's a good deal easier to detect overflow for an increment/decrement.
    this.flags.P = (operand === 0x7f) ? 1 : 0;
    this.flags.N = 0;
-   
+
    result &= 0xff;
    this.update_xy_flags(result);
-   
+
    return result;
 };
 
 Z80.prototype.do_dec = function(operand)
 {
    var result = operand - 1;
-   
+
    this.flags.S = (result & 0x80) ? 1 : 0;
    this.flags.Z = !(result & 0xff) ? 1 : 0;
    this.flags.H = ((operand & 0x0f) === 0x00) ? 1 : 0;
    this.flags.P = (operand === 0x80) ? 1 : 0;
    this.flags.N = 1;
-   
+
    result &= 0xff;
    this.update_xy_flags(result);
-   
+
    return result;
 };
 
@@ -716,11 +752,11 @@ Z80.prototype.do_hl_add = function(operand)
    // The HL arithmetic instructions are the same as the A ones,
    //  just with twice as many bits happening.
    var hl = this.l | (this.h << 8), result = hl + operand;
-   
+
    this.flags.N = 0;
    this.flags.C = (result & 0x10000) ? 1 : 0;
    this.flags.H = (((hl & 0x0fff) + (operand & 0x0fff)) & 0x1000) ? 1 : 0;
-   
+
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
 
@@ -731,17 +767,17 @@ Z80.prototype.do_hl_adc = function(operand)
 {
    operand += this.flags.C;
    var hl = this.l | (this.h << 8), result = hl + operand;
-   
+
    this.flags.S = (result & 0x8000) ? 1 : 0;
    this.flags.Z = !(result & 0xffff) ? 1 : 0;
    this.flags.H = (((hl & 0x0fff) + (operand & 0x0fff)) & 0x1000) ? 1 : 0;
    this.flags.P = ((hl & 0x8000) === (operand & 0x8000)) && ((result & 0x8000) !== (hl & 0x8000)) ? 1 : 0;
    this.flags.N = 0;
    this.flags.C = (result & 0x10000) ? 1 : 0;
-   
+
    this.l = result & 0xff;
    this.h = (result >>> 8) & 0xff;
-   
+
    this.update_xy_flags(this.h);
 };
 
@@ -749,31 +785,31 @@ Z80.prototype.do_hl_sbc = function(operand)
 {
    operand += this.flags.C;
    var hl = this.l | (this.h << 8), result = hl - operand;
-   
+
    this.flags.S = (result & 0x8000) ? 1 : 0;
    this.flags.Z = !(result & 0xffff) ? 1 : 0;
    this.flags.H = (((hl & 0x0fff) - (operand & 0x0fff)) & 0x1000) ? 1 : 0;
    this.flags.P = ((hl & 0x8000) !== (operand & 0x8000)) && ((result & 0x8000) !== (hl & 0x8000)) ? 1 : 0;
    this.flags.N = 1;
    this.flags.C = (result & 0x10000) ? 1 : 0;
-   
+
    this.l = result & 0xff;
    this.h = (result >>> 8) & 0xff;
-   
+
    this.update_xy_flags(this.h);
 };
 
 Z80.prototype.do_in = function(port)
 {
    var result = this.core.io_read(port);
-   
+
    this.flags.S = (result & 0x80) ? 1 : 0;
    this.flags.Z = result ? 0 : 1;
    this.flags.H = 0;
    this.flags.P = this.get_parity(result) ? 1 : 0;
    this.flags.N = 0;
    this.update_xy_flags(result);
-   
+
    return result;
 };
 
@@ -784,10 +820,10 @@ Z80.prototype.do_neg = function()
    {
       // This is a signed operation, so convert A to a signed value.
       this.a = this.get_signed_offset_byte(this.a);
-      
+
       this.a = (-this.a) & 0xff;
    }
-   
+
    this.flags.S = (this.a & 0x80) ? 1 : 0;
    this.flags.Z = !this.a ? 1 : 0;
    this.flags.H = (((-this.a) & 0x0f) > 0) ? 1 : 0;
@@ -802,7 +838,7 @@ Z80.prototype.do_ldi = function()
    // Copy the value that we're supposed to copy.
    var read_value = this.core.mem_read(this.l | (this.h << 8));
    this.core.mem_write(this.e | (this.d << 8), read_value);
-   
+
    // Increment DE and HL, and decrement BC.
    var result = (this.e | (this.d << 8)) + 1;
    this.e = result & 0xff;
@@ -813,7 +849,7 @@ Z80.prototype.do_ldi = function()
    result = (this.c | (this.b << 8)) - 1;
    this.c = result & 0xff;
    this.b = (result & 0xff00) >>> 8;
-   
+
    this.flags.H = 0;
    this.flags.P = (this.c || this.b) ? 1 : 0;
    this.flags.N = 0;
@@ -829,23 +865,23 @@ Z80.prototype.do_cpi = function()
    this.flags.C = temp_carry;
    this.flags.Y = ((this.a - read_value - this.flags.H) & 0x02) >>> 1;
    this.flags.X = ((this.a - read_value - this.flags.H) & 0x08) >>> 3;
-   
+
    var result = (this.l | (this.h << 8)) + 1;
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
    result = (this.c | (this.b << 8)) - 1;
    this.c = result & 0xff;
    this.b = (result & 0xff00) >>> 8;
-   
+
    this.flags.P = result ? 1 : 0;
 };
 
 Z80.prototype.do_ini = function()
 {
    this.b = this.do_dec(this.b);
-   
+
    this.core.mem_write(this.l | (this.h << 8), this.core.io_read((this.b << 8) | this.c));
-   
+
    var result = (this.l | (this.h << 8)) + 1;
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
@@ -856,11 +892,11 @@ Z80.prototype.do_ini = function()
 Z80.prototype.do_outi = function()
 {
    this.core.io_write((this.b << 8) | this.c, this.core.mem_read(this.l | (this.h << 8)));
-   
+
    var result = (this.l | (this.h << 8)) + 1;
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
-   
+
    this.b = this.do_dec(this.b);
    this.flags.N = 1;
 };
@@ -869,10 +905,10 @@ Z80.prototype.do_ldd = function()
 {
    this.flags.N = 0;
    this.flags.H = 0;
-   
+
    var read_value = this.core.mem_read(this.l | (this.h << 8));
    this.core.mem_write(this.e | (this.d << 8), read_value);
-   
+
    var result = (this.e | (this.d << 8)) - 1;
    this.e = result & 0xff;
    this.d = (result & 0xff00) >>> 8;
@@ -882,7 +918,7 @@ Z80.prototype.do_ldd = function()
    result = (this.c | (this.b << 8)) - 1;
    this.c = result & 0xff;
    this.b = (result & 0xff00) >>> 8;
-   
+
    this.flags.P = (this.c || this.b) ? 1 : 0;
    this.flags.Y = ((this.a + read_value) & 0x02) >>> 1;
    this.flags.X = ((this.a + read_value) & 0x08) >>> 3;
@@ -896,38 +932,38 @@ Z80.prototype.do_cpd = function()
    this.flags.C = temp_carry;
    this.flags.Y = ((this.a - read_value - this.flags.H) & 0x02) >>> 1;
    this.flags.X = ((this.a - read_value - this.flags.H) & 0x08) >>> 3;
-   
+
    var result = (this.l | (this.h << 8)) - 1;
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
    result = (this.c | (this.b << 8)) - 1;
    this.c = result & 0xff;
    this.b = (result & 0xff00) >>> 8;
-   
+
    this.flags.P = result ? 1 : 0;
 };
 
 Z80.prototype.do_ind = function()
 {
    this.b = this.do_dec(this.b);
-   
+
    this.core.mem_write(this.l | (this.h << 8), this.core.io_read((this.b << 8) | this.c));
-   
+
    var result = (this.l | (this.h << 8)) - 1;
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
-   
+
    this.flags.N = 1;
 };
 
 Z80.prototype.do_outd = function()
 {
    this.core.io_write((this.b << 8) | this.c, this.core.mem_read(this.l | (this.h << 8)));
-   
+
    var result = (this.l | (this.h << 8)) - 1;
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
-   
+
    this.b = this.do_dec(this.b);
    this.flags.N = 1;
 };
@@ -936,15 +972,15 @@ Z80.prototype.do_rlc = function(operand)
 {
    this.flags.N = 0;
    this.flags.H = 0;
-   
+
    this.flags.C = (operand & 0x80) >>> 7;
    operand = ((operand << 1) | this.flags.C) & 0xff;
-   
+
    this.flags.Z = !operand ? 1 : 0;
    this.flags.P = this.get_parity(operand);
    this.flags.S = (operand & 0x80) ? 1 : 0;
    this.update_xy_flags(operand);
-   
+
    return operand;
 };
 
@@ -952,15 +988,15 @@ Z80.prototype.do_rrc = function(operand)
 {
    this.flags.N = 0;
    this.flags.H = 0;
-   
+
    this.flags.C = operand & 1;
    operand = ((operand >>> 1) & 0x7f) | (this.flags.C << 7);
-   
+
    this.flags.Z = !(operand & 0xff) ? 1 : 0;
    this.flags.P = this.get_parity(operand);
    this.flags.S = (operand & 0x80) ? 1 : 0;
    this.update_xy_flags(operand);
-   
+
    return operand & 0xff;
 };
 
@@ -968,11 +1004,11 @@ Z80.prototype.do_rl = function(operand)
 {
    this.flags.N = 0;
    this.flags.H = 0;
-   
+
    var temp = this.flags.C;
    this.flags.C = (operand & 0x80) >>> 7;
    operand = ((operand << 1) | temp) & 0xff;
-   
+
    this.flags.Z = !operand ? 1 : 0;
    this.flags.P = this.get_parity(operand);
    this.flags.S = (operand & 0x80) ? 1 : 0;
@@ -985,11 +1021,11 @@ Z80.prototype.do_rr = function(operand)
 {
    this.flags.N = 0;
    this.flags.H = 0;
-   
+
    var temp = this.flags.C;
    this.flags.C = operand & 1;
    operand = ((operand >>> 1) & 0x7f) | (temp << 7);
-   
+
    this.flags.Z = !operand ? 1 : 0;
    this.flags.P = this.get_parity(operand);
    this.flags.S = (operand & 0x80) ? 1 : 0;
@@ -1002,15 +1038,15 @@ Z80.prototype.do_sla = function(operand)
 {
    this.flags.N = 0;
    this.flags.H = 0;
-   
+
    this.flags.C = (operand & 0x80) >>> 7;
    operand = (operand << 1) & 0xff;
-   
+
    this.flags.Z = !operand ? 1 : 0;
    this.flags.P = this.get_parity(operand);
    this.flags.S = (operand & 0x80) ? 1 : 0;
    this.update_xy_flags(operand);
-   
+
    return operand;
 };
 
@@ -1018,15 +1054,15 @@ Z80.prototype.do_sra = function(operand)
 {
    this.flags.N = 0;
    this.flags.H = 0;
-   
+
    this.flags.C = operand & 1;
    operand = ((operand >>> 1) & 0x7f) | (operand & 0x80);
-   
+
    this.flags.Z = !operand ? 1 : 0;
    this.flags.P = this.get_parity(operand);
    this.flags.S = (operand & 0x80) ? 1 : 0;
    this.update_xy_flags(operand);
-   
+
    return operand;
 };
 
@@ -1034,15 +1070,15 @@ Z80.prototype.do_sll = function(operand)
 {
    this.flags.N = 0;
    this.flags.H = 0;
-   
+
    this.flags.C = (operand & 0x80) >>> 7;
    operand = ((operand << 1) & 0xff) | 1;
-   
+
    this.flags.Z = !operand ? 1 : 0;
    this.flags.P = this.get_parity(operand);
    this.flags.S = (operand & 0x80) ? 1 : 0;
    this.update_xy_flags(operand);
-   
+
    return operand;
 };
 
@@ -1050,28 +1086,28 @@ Z80.prototype.do_srl = function(operand)
 {
    this.flags.N = 0;
    this.flags.H = 0;
-   
+
    this.flags.C = operand & 1;
    operand = (operand >>> 1) & 0x7f;
-   
+
    this.flags.Z = !operand ? 1 : 0;
    this.flags.P = this.get_parity(operand);
    this.flags.S = 0;
    this.update_xy_flags(operand);
-   
+
    return operand;
 };
 
 Z80.prototype.do_ix_add = function(operand)
 {
    this.flags.N = 0;
-   
+
    var result = this.ix + operand;
-   
+
    this.flags.C = (result & 0x10000) ? 1 : 0;
    this.flags.H = (((this.ix & 0xfff) + (operand & 0xfff)) & 0x1000) ? 1 : 0;
    this.update_xy_flags((result & 0xff00) >>> 8);
-   
+
    this.ix = result;
 };
 
@@ -1142,7 +1178,7 @@ Z80.prototype.instructions[0x08] = function()
    var temp = this.a;
    this.a = this.a_prime;
    this.a_prime = temp;
-   
+
    temp = this.get_flags_register();
    this.set_flags_register(this.get_flags_prime());
    this.set_flags_prime(temp);
@@ -1311,7 +1347,7 @@ Z80.prototype.instructions[0x22] = function()
    var address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
-   
+
    this.core.mem_write(address, this.l);
    this.core.mem_write((address + 1) & 0xffff, this.h);
 };
@@ -1357,7 +1393,7 @@ Z80.prototype.instructions[0x27] = function()
       if (this.flags.C || (this.a > 0x99))
          temp -= 0x60;
    }
-   
+
    this.flags.S = (temp & 0x80) ? 1 : 0;
    this.flags.Z = !(temp & 0xff) ? 1 : 0;
    this.flags.H = ((this.a & 0x10) ^ (temp & 0x10)) ? 1 : 0;
@@ -1367,9 +1403,9 @@ Z80.prototype.instructions[0x27] = function()
    // Don't ask me, I don't know.
    // Note also that we check for a BCD carry, instead of the usual.
    this.flags.C = (this.flags.C || (this.a > 0x99)) ? 1 : 0;
-   
+
    this.a = temp & 0xff;
-   
+
    this.update_xy_flags(this.a);
 };
 // 0x28 : JR Z, n
@@ -1389,7 +1425,7 @@ Z80.prototype.instructions[0x2a] = function()
    var address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
-   
+
    this.l = this.core.mem_read(address);
    this.h = this.core.mem_read((address + 1) & 0xffff);
 };
@@ -1433,7 +1469,7 @@ Z80.prototype.instructions[0x30] = function()
 // 0x31 : LD SP, nn
 Z80.prototype.instructions[0x31] = function()
 {
-   this.sp =  this.core.mem_read((this.pc + 1) & 0xffff) | 
+   this.sp =  this.core.mem_read((this.pc + 1) & 0xffff) |
             (this.core.mem_read((this.pc + 2) & 0xffff) << 8);
    this.pc = (this.pc + 2) & 0xffff;
 };
@@ -1444,7 +1480,7 @@ Z80.prototype.instructions[0x32] = function()
    var address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
-   
+
    this.core.mem_write(address, this.a);
 };
 // 0x33 : INC SP
@@ -1495,7 +1531,7 @@ Z80.prototype.instructions[0x3a] = function()
    var address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
-   
+
    this.a = this.core.mem_read(address);
 };
 // 0x3b : DEC SP
@@ -1602,13 +1638,13 @@ Z80.prototype.instructions[0xcb] = function()
    var opcode = this.core.mem_read(this.pc),
        bit_number = (opcode & 0x38) >>> 3,
        reg_code = opcode & 0x07;
-   
+
    if (opcode < 0x40)
    {
       // Shift/rotate instructions
       var op_array = [this.do_rlc, this.do_rrc, this.do_rl, this.do_rr,
                       this.do_sla, this.do_sra, this.do_sll, this.do_srl];
-      
+
       if (reg_code === 0)
          this.b = op_array[bit_number].call(this, this.b);
       else if (reg_code === 1)
@@ -1646,7 +1682,7 @@ Z80.prototype.instructions[0xcb] = function()
          this.flags.Z = !((this.core.mem_read(this.l | (this.h << 8))) & (1 << bit_number)) ? 1 : 0;
       else if (reg_code === 7)
          this.flags.Z = !(this.a & (1 << bit_number)) ? 1 : 0;
-         
+
       this.flags.N = 0;
       this.flags.H = 1;
       this.flags.P = this.flags.Z;
@@ -1702,7 +1738,7 @@ Z80.prototype.instructions[0xcb] = function()
       else if (reg_code === 7)
          this.a |= (1 << bit_number);
    }
-   
+
    this.cycle_counter += this.cycle_counts_cb[opcode];
 };
 // 0xcc : CALL Z, nn
@@ -1828,7 +1864,7 @@ Z80.prototype.instructions[0xdd] = function()
    this.pc = (this.pc + 1) & 0xffff;
    var opcode = this.core.mem_read(this.pc),
        func = this.dd_instructions[opcode];
-       
+
    if (func)
    {
       func = func.bind(this);
@@ -1839,7 +1875,7 @@ Z80.prototype.instructions[0xdd] = function()
    {
       // Apparently if a DD opcode doesn't exist,
       //  it gets treated as an unprefixed opcode.
-      // What we'll do to handle that is just back up the 
+      // What we'll do to handle that is just back up the
       //  program counter, so that this byte gets decoded
       //  as a normal instruction.
       this.pc = (this.pc - 1) & 0xffff;
@@ -1949,7 +1985,7 @@ Z80.prototype.instructions[0xed] = function()
    this.pc = (this.pc + 1) & 0xffff;
    var opcode = this.core.mem_read(this.pc),
        func = this.ed_instructions[opcode];
-       
+
    if (func)
    {
       func = func.bind(this);
@@ -2051,11 +2087,11 @@ Z80.prototype.instructions[0xfd] = function()
    // The high bit of R is not affected by this increment,
    //  it can only be changed using the LD R, A instruction.
    this.r = (this.r & 0x80) | (((this.r & 0x7f) + 1) & 0x7f);
-   
+
    this.pc = (this.pc + 1) & 0xffff;
    var opcode = this.core.mem_read(this.pc),
        func = this.dd_instructions[opcode];
-       
+
    if (func)
    {
       // Rather than copy and paste all the IX instructions into IY instructions,
@@ -2067,14 +2103,14 @@ Z80.prototype.instructions[0xfd] = function()
       func();
       this.iy = this.ix;
       this.ix = temp;
-      
+
       this.cycle_counter += this.cycle_counts_dd[opcode];
    }
    else
    {
       // Apparently if an FD opcode doesn't exist,
       //  it gets treated as an unprefixed opcode.
-      // What we'll do to handle that is just back up the 
+      // What we'll do to handle that is just back up the
       //  program counter, so that this byte gets decoded
       //  as a normal instruction.
       this.pc = (this.pc - 1) & 0xffff;
@@ -2123,7 +2159,7 @@ Z80.prototype.ed_instructions[0x43] = function()
    var address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
-   
+
    this.core.mem_write(address, this.c);
    this.core.mem_write((address + 1) & 0xffff, this.b);
 };
@@ -2170,7 +2206,7 @@ Z80.prototype.ed_instructions[0x4b] = function()
    var address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
-   
+
    this.c = this.core.mem_read(address);
    this.b = this.core.mem_read((address + 1) & 0xffff);
 };
@@ -2216,7 +2252,7 @@ Z80.prototype.ed_instructions[0x53] = function()
    var address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
-   
+
    this.core.mem_write(address, this.e);
    this.core.mem_write((address + 1) & 0xffff, this.d);
 };
@@ -2264,7 +2300,7 @@ Z80.prototype.ed_instructions[0x5b] = function()
    var address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
-   
+
    this.e = this.core.mem_read(address);
    this.d = this.core.mem_read((address + 1) & 0xffff);
 };
@@ -2312,7 +2348,7 @@ Z80.prototype.ed_instructions[0x63] = function()
    var address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
-   
+
    this.core.mem_write(address, this.l);
    this.core.mem_write((address + 1) & 0xffff, this.h);
 };
@@ -2340,7 +2376,7 @@ Z80.prototype.ed_instructions[0x67] = function()
    hl_value = ((hl_value & 0xf0) >>> 4) | (temp2 << 4);
    this.a = (this.a & 0xf0) | temp1;
    this.core.mem_write(this.l | (this.h << 8), hl_value);
-   
+
    this.flags.S = (this.a & 0x80) ? 1 : 0;
    this.flags.Z = this.a ? 0 : 1;
    this.flags.H = 0;
@@ -2370,7 +2406,7 @@ Z80.prototype.ed_instructions[0x6b] = function()
    var address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
-   
+
    this.l = this.core.mem_read(address);
    this.h = this.core.mem_read((address + 1) & 0xffff);
 };
@@ -2398,7 +2434,7 @@ Z80.prototype.ed_instructions[0x6f] = function()
    hl_value = ((hl_value & 0x0f) << 4) | temp2;
    this.a = (this.a & 0xf0) | (temp1 >>> 4);
    this.core.mem_write(this.l | (this.h << 8), hl_value);
-   
+
    this.flags.S = (this.a & 0x80) ? 1 : 0;
    this.flags.Z = this.a ? 0 : 1;
    this.flags.H = 0;
@@ -2428,7 +2464,7 @@ Z80.prototype.ed_instructions[0x73] = function()
    var address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
-   
+
    this.core.mem_write(address, this.sp & 0xff);
    this.core.mem_write((address + 1) & 0xffff, (this.sp >>> 8) & 0xff);
 };
@@ -2470,7 +2506,7 @@ Z80.prototype.ed_instructions[0x7b] = function()
    var address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
-   
+
    this.sp = this.core.mem_read(address);
    this.sp |= this.core.mem_read((address + 1) & 0xffff) << 8;
 };
@@ -2644,7 +2680,7 @@ Z80.prototype.dd_instructions[0x22] = function()
    var address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= (this.core.mem_read(this.pc) << 8);
-   
+
    this.core.mem_write(address, this.ix & 0xff);
    this.core.mem_write((address + 1) & 0xffff, (this.ix >>> 8) & 0xff);
 };
@@ -2681,7 +2717,7 @@ Z80.prototype.dd_instructions[0x2a] = function()
    var address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= (this.core.mem_read(this.pc) << 8);
-   
+
    this.ix = this.core.mem_read(address);
    this.ix |= (this.core.mem_read((address + 1) & 0xffff) << 8);
 };
@@ -2728,7 +2764,7 @@ Z80.prototype.dd_instructions[0x36] = function()
    this.pc = (this.pc + 1) & 0xffff;
    var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.pc = (this.pc + 1) & 0xffff;
-   this.core.mem_write((this.ix + offset) & 0xffff, this.core.mem_read(this.pc));   
+   this.core.mem_write((this.ix + offset) & 0xffff, this.core.mem_read(this.pc));
 };
 // 0x39 : ADD IX, SP
 Z80.prototype.dd_instructions[0x39] = function()
@@ -3096,7 +3132,7 @@ Z80.prototype.dd_instructions[0xcb] = function()
    var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.pc = (this.pc + 1) & 0xffff;
    var opcode = this.core.mem_read(this.pc), value;
-   
+
    // As with the "normal" CB prefix, we implement the DDCB prefix
    //  by decoding the opcode directly, rather than using a table.
    if (opcode < 0x40)
@@ -3104,18 +3140,18 @@ Z80.prototype.dd_instructions[0xcb] = function()
       // Shift and rotate instructions.
       var ddcb_functions = [this.do_rlc, this.do_rrc, this.do_rl, this.do_rr,
                             this.do_sla, this.do_sra, this.do_sll, this.do_srl];
-      
+
       // Most of the opcodes in this range are not valid,
       //  so we map this opcode onto one of the ones that is.
       var func = ddcb_functions[(opcode & 0x38) >>> 3],
       value = func.call(this, this.core.mem_read((this.ix + offset) & 0xffff));
-      
+
       this.core.mem_write((this.ix + offset) & 0xffff, value);
    }
    else
    {
       var bit_number = (opcode & 0x38) >>> 3;
-      
+
       if (opcode < 0x80)
       {
          // BIT
@@ -3138,7 +3174,7 @@ Z80.prototype.dd_instructions[0xcb] = function()
          this.core.mem_write((this.ix + offset) & 0xffff, value);
       }
    }
-   
+
    // This implements the undocumented shift, RES, and SET opcodes,
    //  which write their result to memory and also to an 8080 register.
    if (value !== undefined)
@@ -3159,7 +3195,7 @@ Z80.prototype.dd_instructions[0xcb] = function()
       else if ((opcode & 0x07) === 7)
          this.a = value;
    }
-   
+
    this.cycle_counter += this.cycle_counts_cb[opcode] + 8;
 };
 // 0xe1 : POP IX
