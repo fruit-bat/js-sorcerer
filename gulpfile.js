@@ -4,19 +4,20 @@ var tsProject = ts.createProject("tsconfig.json");
 var serve = require('gulp-serve');
 var browserSync = require('browser-sync');
 var livereload = require('gulp-livereload');
+var target = 'docs';
 
 gulp.task('copy', function() {
   gulp.src(['**/*.html'], {cwd: 'src'})
-   .pipe(gulp.dest('dist'));
+   .pipe(gulp.dest(target));
 
   gulp.src(['**/*'], {cwd: 'assets'})
-   .pipe(gulp.dest('dist'));
+   .pipe(gulp.dest(target));
 });
 
 gulp.task("tsify", function () {
     return tsProject.src()
         .pipe(tsProject())
-        .js.pipe(gulp.dest("dist"));
+        .js.pipe(gulp.dest(target));
 });
 
 gulp.task("build", ['copy', 'tsify']);
@@ -35,10 +36,10 @@ gulp.task('serve', ['watch'], function() {
 
   browserSync({
     server: {
-      baseDir: 'dist',
+      baseDir: target,
     },
    port: 8080
   });
 
-  gulp.watch(['**/*'], {cwd: 'dist'}, reload);
+  gulp.watch(['**/*'], {cwd: target}, reload);
 });

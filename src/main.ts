@@ -8,5 +8,5 @@ let exidySorcerer = new ExidySorcerer(
 	<HTMLCanvasElement>document.getElementById('exidyBytes'),
 	<HTMLCanvasElement>document.getElementById('exidyCharacters'),
 	<HTMLCanvasElement>document.getElementById('exidyScreen'));
-exidySorcerer.load('chomp.snp');
+//exidySorcerer.load('chomp.snp');
 exidySorcerer.run();
