@@ -16,6 +16,7 @@ export default class ExidySorcerer {
 	private cpu : Z80;
 	private memorySystem : MemorySystem;
 	private ready : Promise<any>;
+	private filesystem
 
 	public constructor(
 		filesystem : ExidyFile,
@@ -23,6 +24,7 @@ export default class ExidySorcerer {
 		charsCanvas : HTMLCanvasElement,
 		screenCanvas : HTMLCanvasElement
 	) {
+		this.filesystem = filesystem;
 		this.memorySystem = new MemorySystem(byteCanvas, charsCanvas, screenCanvas);
 		this.cpu = new Z80(this.memorySystem.memory);
 
@@ -31,11 +33,15 @@ export default class ExidySorcerer {
 				this.memorySystem.loadRom(data, romConfig.address);
 				this.memorySystem.updateCharacters();
 				this.memorySystem.updateScreen();
+				this.reset();
 				return true;
 			});
-		})).then(() => {
-			// Load a SNP
-			return filesystem.read('snaps/' + 'chomp.snp').then((data) => {
+		}));
+	}
+
+	public load(snap : string) : void {
+		this.ready = this.ready.then(() => {
+			return this.filesystem.read('snaps/' + snap).then((data) => {
 				this.memorySystem.load(data, 0x0000, 28);
 				this.memorySystem.updateCharacters();
 				this.memorySystem.updateScreen();
