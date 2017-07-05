@@ -2,6 +2,7 @@
 
 import { ExidyZ80 as Z80 } from './ExidyZ80'
 import ExidyFile from './ExidyFile'
+import DropZone from './DropZone'
 import { MemorySystem } from './ExidyMemory'
 
 const defaultRoms = [
@@ -37,15 +38,23 @@ export default class ExidySorcerer {
 				return true;
 			});
 		}));
+
+		new DropZone(screenCanvas, (buffer) => {
+			this.loadSnpFromArray(new Uint8Array(buffer));
+		});
+	}
+
+	private loadSnpFromArray(data : Uint8Array) : void {
+		this.memorySystem.load(data, 0x0000, 28);
+		this.memorySystem.updateCharacters();
+		this.memorySystem.updateScreen();
+		this.cpu.load(data);
 	}
 
 	public load(snap : string) : void {
 		this.ready = this.ready.then(() => {
 			return this.filesystem.read('snaps/' + snap).then((data) => {
-				this.memorySystem.load(data, 0x0000, 28);
-				this.memorySystem.updateCharacters();
-				this.memorySystem.updateScreen();
-				this.cpu.load(data);
+				this.loadSnpFromArray(data);
 				return true;
 			});
 		});

@@ -16,6 +16,50 @@ define("BinaryAjax", ["require", "exports"], function (require, exports) {
     }
     exports.default = BinaryAjax;
 });
+define("DropZone", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class DropZone {
+        stopEvent(e) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+        handleDragOver(e) {
+            this.stopEvent(e);
+        }
+        handleDragEnter(e) {
+            this.stopEvent(e);
+        }
+        handleFiles(files) {
+            for (let i = 0; i < files.length; i++) {
+                let file = files[i];
+                let reader = new FileReader();
+                reader.onload = (e) => {
+                    this.handler(reader.result);
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+        handleDrop(e) {
+            this.stopEvent(e);
+            var url = e.dataTransfer.getData('text/plain');
+            if (url) {
+                console.log('TODO drop url');
+            }
+            else {
+                this.handleFiles(e.dataTransfer.files);
+            }
+        }
+        constructor(element, handler) {
+            this.handler = handler;
+            this.element = element;
+            this.element.addEventListener("dragenter", (e) => { this.handleDragEnter(e); }, false);
+            this.element.addEventListener("dragover", (e) => { this.handleDragOver(e); }, false);
+            this.element.addEventListener("drop", (e) => { this.handleDrop(e); }, false);
+        }
+    }
+    exports.default = DropZone;
+});
 define("ExidyCpu", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -305,7 +349,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     }
     exports.ExidyZ80 = ExidyZ80;
 });
-define("ExidySorcerer", ["require", "exports", "ExidyZ80", "ExidyMemory"], function (require, exports, ExidyZ80_1, ExidyMemory_1) {
+define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMemory"], function (require, exports, ExidyZ80_1, DropZone_1, ExidyMemory_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const defaultRoms = [
@@ -315,6 +359,12 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "ExidyMemory"], funct
         { name: "diskboot.dat", address: 0xBC00 }
     ];
     class ExidySorcerer {
+        dropHandler(e) {
+            console.log('ahndler');
+            e.stopPropagation();
+            e.preventDefault();
+            e.target.className = (e.type == "dragover" ? "hover" : "");
+        }
         constructor(filesystem, byteCanvas, charsCanvas, screenCanvas) {
             this.filesystem = filesystem;
             this.memorySystem = new ExidyMemory_1.MemorySystem(byteCanvas, charsCanvas, screenCanvas);
@@ -328,14 +378,20 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "ExidyMemory"], funct
                     return true;
                 });
             }));
+            new DropZone_1.default(screenCanvas, (buffer) => {
+                this.loadSnpFromArray(new Uint8Array(buffer));
+            });
+        }
+        loadSnpFromArray(data) {
+            this.memorySystem.load(data, 0x0000, 28);
+            this.memorySystem.updateCharacters();
+            this.memorySystem.updateScreen();
+            this.cpu.load(data);
         }
         load(snap) {
             this.ready = this.ready.then(() => {
                 return this.filesystem.read('snaps/' + snap).then((data) => {
-                    this.memorySystem.load(data, 0x0000, 28);
-                    this.memorySystem.updateCharacters();
-                    this.memorySystem.updateScreen();
-                    this.cpu.load(data);
+                    this.loadSnpFromArray(data);
                     return true;
                 });
             });
