@@ -60,6 +60,64 @@ define("DropZone", ["require", "exports"], function (require, exports) {
     }
     exports.default = DropZone;
 });
+define("ExidyInput", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+});
+define("ExidyOutput", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+});
+define("ExidyKeyboard", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class Keyboard {
+        constructor() {
+            this.activeScanLine = 0;
+            this.line = new Array(16);
+            this.line.fill(0xff);
+        }
+        readByte(address) {
+            return this.line[this.activeScanLine];
+        }
+        writeByte(address, data) {
+            this.activeScanLine = data & 0xf;
+        }
+        release(row, key) {
+            this.line[row] |= 1 << key;
+        }
+        press(row, key) {
+            this.line[row] &= ~(1 << key);
+        }
+    }
+    exports.default = Keyboard;
+});
+define("ExidyBrowserKeyboard", ["require", "exports", "ExidyKeyboard"], function (require, exports, ExidyKeyboard_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    const keymap = {
+        13: { row: 11, key: 1 },
+        16: { row: 0, key: 4 },
+        65: { row: 2, key: 2 },
+        48: { row: 9, key: 4 },
+        49: { row: 2, key: 4 }
+    };
+    class BrowserKeyboard extends ExidyKeyboard_1.default {
+        browserKeyUp(key) {
+            if (key in keymap) {
+                let mapping = keymap[key];
+                this.release(mapping.row, mapping.key);
+            }
+        }
+        browserKeyDown(key) {
+            if (key in keymap) {
+                let mapping = keymap[key];
+                this.press(mapping.row, mapping.key);
+            }
+        }
+    }
+    exports.default = BrowserKeyboard;
+});
 define("ExidyCpu", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -81,6 +139,62 @@ define("ExidyFileBinaryAjax", ["require", "exports", "BinaryAjax"], function (re
     }
     exports.default = ExidyFileBinaryAjax;
 });
+define("ExidyIo", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class NoInput {
+        readByte(address) {
+            return 255;
+        }
+    }
+    class NoOutput {
+        writeByte(address, data) {
+        }
+    }
+    class InputMultiplexor {
+        constructor() {
+            this.handlers = new Array(256);
+            this.handlers.fill(new NoInput());
+        }
+        readByte(address) {
+            return this.handlers[address & 0xFF].readByte(address);
+        }
+        setHandler(address, length, handler) {
+            for (let i = 0; i < length; ++i) {
+                this.handlers[address + i] = handler;
+            }
+        }
+    }
+    class OutputMultiplexor {
+        constructor() {
+            this.handlers = new Array(256);
+            this.handlers.fill(new NoOutput());
+        }
+        writeByte(address, data) {
+            this.handlers[address & 0xFF].writeByte(address, data);
+        }
+        setHandler(address, length, handler) {
+            for (let i = 0; i < length; ++i) {
+                this.handlers[address + i] = handler;
+            }
+        }
+    }
+    class IoSystem {
+        constructor(keyboard) {
+            this._input = new InputMultiplexor();
+            this._output = new OutputMultiplexor();
+            this._output.setHandler(0xFE, 1, keyboard);
+            this._input.setHandler(0xFE, 1, keyboard);
+        }
+        get output() {
+            return this._output;
+        }
+        get input() {
+            return this._input;
+        }
+    }
+    exports.IoSystem = IoSystem;
+});
 define("ExidyMemory", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -89,19 +203,11 @@ define("ExidyMemory", ["require", "exports"], function (require, exports) {
             this.memory = memory;
         }
         readByte(address) {
-            return this.memory.getUint8(address);
-        }
-        ;
-        readWord(address) {
-            return this.memory.getUint16(address, true);
+            return this.memory[address];
         }
         ;
         writeByte(address, data) {
-            this.memory.setUint8(address, data);
-        }
-        ;
-        writeWord(address, data) {
-            this.memory.setUint16(address, data, true);
+            this.memory[address] = data;
         }
         ;
     }
@@ -111,17 +217,10 @@ define("ExidyMemory", ["require", "exports"], function (require, exports) {
             this.memory = memory;
         }
         readByte(address) {
-            return this.memory.getUint8(address);
-        }
-        ;
-        readWord(address) {
-            return this.memory.getUint16(address, true);
+            return this.memory[address];
         }
         ;
         writeByte(address, data) {
-        }
-        ;
-        writeWord(address, data) {
         }
         ;
     }
@@ -132,33 +231,21 @@ define("ExidyMemory", ["require", "exports"], function (require, exports) {
         readByte(address) {
             return 0;
         }
-        readWord(address) {
-            return 0;
-        }
         writeByte(address, data) {
-        }
-        writeWord(address, data) {
         }
     }
     exports.NoMemory = NoMemory;
-    const MEMORY_SIZE_IN_BYTES = Math.pow(2, 16);
+    const MEMORY_SIZE_IN_BYTES = 65536;
     class Multiplexor {
         constructor() {
-            this.memory = new DataView(new ArrayBuffer(MEMORY_SIZE_IN_BYTES));
             this.handlers = new Array(MEMORY_SIZE_IN_BYTES);
             this.handlers.fill(new NoMemory());
         }
         readByte(address) {
             return this.handlers[address].readByte(address);
         }
-        readWord(address) {
-            return this.handlers[address].readWord(address);
-        }
         writeByte(address, data) {
             this.handlers[address].writeByte(address, data);
-        }
-        writeWord(address, data) {
-            this.handlers[address].writeWord(address, data);
         }
         setHandler(address, length, handler) {
             for (let i = 0; i < length; ++i) {
@@ -166,7 +253,6 @@ define("ExidyMemory", ["require", "exports"], function (require, exports) {
             }
         }
     }
-    exports.Multiplexor = Multiplexor;
     const CHARS_START = 0xF800;
     const CHARS_SIZE_BYTES = 8 * 256;
     class ExidyCharacters extends Ram {
@@ -190,13 +276,6 @@ define("ExidyMemory", ["require", "exports"], function (require, exports) {
             if (address >= 0xFC00 && (data !== this.readByte(address))) {
                 super.writeByte(address, data);
                 this.charUpdated(this.updateByte(address, data));
-            }
-        }
-        writeWord(address, data) {
-            if (address >= 0xFC00) {
-                super.writeWord(address, data);
-                this.updateByte(address, data & 0xff);
-                this.updateByte(address, (data >> 8) & 0xff);
             }
         }
         updateByte(address, data) {
@@ -231,11 +310,6 @@ define("ExidyMemory", ["require", "exports"], function (require, exports) {
                 this.updateByte(address, data);
             }
         }
-        writeWord(address, data) {
-            super.writeWord(address, data);
-            this.updateByte(address, data & 0xff);
-            this.updateByte(address + 1, (data >> 8) & 0xff);
-        }
         updateByte(address, data) {
             let index = address - SCREEN_START;
             let row = index >> 6;
@@ -263,13 +337,14 @@ define("ExidyMemory", ["require", "exports"], function (require, exports) {
     }
     class MemorySystem {
         constructor(byteCanvas, charsCanvas, screenCanvas) {
-            this.dataview = new DataView(new ArrayBuffer(MEMORY_SIZE_IN_BYTES));
-            this.ram = new Ram(this.dataview);
-            this.rom = new Rom(this.dataview);
+            this._memory = new Uint8Array(MEMORY_SIZE_IN_BYTES);
+            this.ram = new Ram(this._memory);
+            this.rom = new Rom(this._memory);
             this.multplexor = new Multiplexor();
             this.multplexor.setHandler(0, MEMORY_SIZE_IN_BYTES, this.ram);
-            this.exidyScreen = new ExidyScreen(this.dataview, charsCanvas, screenCanvas);
-            this.exidyCharacters = new ExidyCharacters(this.dataview, byteCanvas, charsCanvas, (char) => {
+            this.multplexor.setHandler(0xF800, 0xFE00 - 0xF800, this.rom);
+            this.exidyScreen = new ExidyScreen(this._memory, charsCanvas, screenCanvas);
+            this.exidyCharacters = new ExidyCharacters(this._memory, byteCanvas, charsCanvas, (char) => {
                 this.exidyScreen.charUpdated(char);
             });
             this.multplexor.setHandler(SCREEN_START, SCREEN_SIZE_BYTES, this.exidyScreen);
@@ -278,12 +353,12 @@ define("ExidyMemory", ["require", "exports"], function (require, exports) {
         load(data, address, start = 0) {
             let len = data.length - start;
             for (let i = 0; i < len; ++i) {
-                this.dataview.setUint8(address + i, data[i + start]);
+                this._memory[address + i] = data[i + start];
             }
         }
         loadRom(data, address) {
             for (let i = 0; i < data.length; ++i) {
-                this.dataview.setUint8(address + i, data[i]);
+                this._memory[address + i] = data[i];
             }
             this.multplexor.setHandler(address, data.length, this.rom);
         }
@@ -303,12 +378,12 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class ExidyZ80 {
-        constructor(memory) {
+        constructor(memory, input, output) {
             this.cpu = new Z80({
                 mem_read: (address) => { return memory.readByte(address); },
                 mem_write: (address, data) => { memory.writeByte(address, data); },
-                io_read: (adddress) => { return 0xff; },
-                io_write: (address, data) => { }
+                io_read: (address) => { return input.readByte(address); },
+                io_write: (address, data) => { output.writeByte(address, data); }
             });
         }
         reset(address) {
@@ -349,7 +424,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     }
     exports.ExidyZ80 = ExidyZ80;
 });
-define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMemory"], function (require, exports, ExidyZ80_1, DropZone_1, ExidyMemory_1) {
+define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMemory", "ExidyIo"], function (require, exports, ExidyZ80_1, DropZone_1, ExidyMemory_1, ExidyIo_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const defaultRoms = [
@@ -359,16 +434,11 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
         { name: "diskboot.dat", address: 0xBC00 }
     ];
     class ExidySorcerer {
-        dropHandler(e) {
-            console.log('ahndler');
-            e.stopPropagation();
-            e.preventDefault();
-            e.target.className = (e.type == "dragover" ? "hover" : "");
-        }
-        constructor(filesystem, byteCanvas, charsCanvas, screenCanvas) {
+        constructor(filesystem, keyboard, byteCanvas, charsCanvas, screenCanvas) {
             this.filesystem = filesystem;
             this.memorySystem = new ExidyMemory_1.MemorySystem(byteCanvas, charsCanvas, screenCanvas);
-            this.cpu = new ExidyZ80_1.ExidyZ80(this.memorySystem.memory);
+            this.io = new ExidyIo_1.IoSystem(keyboard);
+            this.cpu = new ExidyZ80_1.ExidyZ80(this.memorySystem.memory, this.io.input, this.io.output);
             this.ready = Promise.all(defaultRoms.map((romConfig) => {
                 return filesystem.read('roms/' + romConfig.name).then((data) => {
                     this.memorySystem.loadRom(data, romConfig.address);
@@ -414,10 +484,20 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
     }
     exports.default = ExidySorcerer;
 });
-define("main", ["require", "exports", "ExidySorcerer", "ExidyFileBinaryAjax"], function (require, exports, ExidySorcerer_1, ExidyFileBinaryAjax_1) {
+define("main", ["require", "exports", "ExidySorcerer", "ExidyFileBinaryAjax", "ExidyBrowserKeyboard"], function (require, exports, ExidySorcerer_1, ExidyFileBinaryAjax_1, ExidyBrowserKeyboard_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    let screenCanvas = document.getElementById('exidyScreen');
     let exidyFile = new ExidyFileBinaryAjax_1.default();
-    let exidySorcerer = new ExidySorcerer_1.default(exidyFile, document.getElementById('exidyBytes'), document.getElementById('exidyCharacters'), document.getElementById('exidyScreen'));
+    let keyboard = new ExidyBrowserKeyboard_1.default();
+    let exidySorcerer = new ExidySorcerer_1.default(exidyFile, keyboard, document.getElementById('exidyBytes'), document.getElementById('exidyCharacters'), screenCanvas);
+    screenCanvas.addEventListener('keydown', (key) => {
+        console.log(key);
+        keyboard.browserKeyDown(key.keyCode);
+    });
+    screenCanvas.addEventListener('keyup', (key) => {
+        console.log(key);
+        keyboard.browserKeyUp(key.keyCode);
+    });
     exidySorcerer.run();
 });

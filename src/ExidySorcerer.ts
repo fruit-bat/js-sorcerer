@@ -4,6 +4,8 @@ import { ExidyZ80 as Z80 } from './ExidyZ80'
 import ExidyFile from './ExidyFile'
 import DropZone from './DropZone'
 import { MemorySystem } from './ExidyMemory'
+import { IoSystem } from './ExidyIo'
+import Keyboard from './ExidyKeyboard'
 
 const defaultRoms = [
 	{ name: "exmo1-1.dat", address: 0xE000 },
@@ -16,18 +18,21 @@ export default class ExidySorcerer {
 
 	private cpu : Z80;
 	private memorySystem : MemorySystem;
+	private io : IoSystem;
 	private ready : Promise<any>;
-	private filesystem
+	private filesystem : ExidyFile;
 
 	public constructor(
 		filesystem : ExidyFile,
+		keyboard : Keyboard,
 		byteCanvas : HTMLCanvasElement,
 		charsCanvas : HTMLCanvasElement,
 		screenCanvas : HTMLCanvasElement
 	) {
 		this.filesystem = filesystem;
 		this.memorySystem = new MemorySystem(byteCanvas, charsCanvas, screenCanvas);
-		this.cpu = new Z80(this.memorySystem.memory);
+		this.io = new IoSystem(keyboard);
+		this.cpu = new Z80(this.memorySystem.memory, this.io.input, this.io.output);
 
 		this.ready = Promise.all(defaultRoms.map((romConfig) => {
 			return filesystem.read('roms/' + romConfig.name).then((data) => {

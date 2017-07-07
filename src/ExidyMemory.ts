@@ -1,5 +1,7 @@
 "use strict"
 
+// TODO Split into separate files
+
 /**
  * Interface to describe the memory processor bus
  */
@@ -13,75 +15,44 @@ export interface Memory {
 	readByte(address: number): number;
 
 	/**
-	 * Read a 16 bit word from memory, LSB, MSB order
-	 *
-	 * @param {number} address The address to read from
-	 * @return The word read
-	 */
-	readWord(address: number): number;
-
-	/**
 	 * Write a byte into memory
 	 *
 	 * @param {number} address The address to be written to
 	 * @param {number} data The byte to be written
 	 */
 	writeByte(address: number, data: number);
-
-	/**
-	 * Write a 16 bit word into memory, LSB, MSB order.
-	 *
-	 * @param {number} address The address to be written to
-	 * @param {number} data The word to be written
-	 */
-	writeWord(address: number, data: number);
 }
 
 export class Ram implements Memory {
 
-	private memory : DataView;
+	private memory : Uint8Array;
 
-	public constructor(memory : DataView) {
+	public constructor(memory : Uint8Array) {
 		this.memory = memory;
 	}
 
 	readByte(address: number): number {
-		return this.memory.getUint8(address);
-	};
-
-	readWord(address: number): number {
-		return this.memory.getUint16(address, true);
+		return this.memory[address];
 	};
 
 	writeByte(address: number, data: number) : void {
-		this.memory.setUint8(address, data);
-	};
-
-	writeWord(address: number, data: number) : void {
-		this.memory.setUint16(address, data, true);
+		this.memory[address] = data;
 	};
 }
 
 export class Rom implements Memory {
 
-	private memory : DataView;
+	private memory : Uint8Array;
 
-	public constructor(memory : DataView) {
+	public constructor(memory : Uint8Array) {
 		this.memory = memory;
 	}
 
 	readByte(address: number): number {
-		return this.memory.getUint8(address);
-	};
-
-	readWord(address: number): number {
-		return this.memory.getUint16(address, true);
+		return this.memory[address];
 	};
 
 	writeByte(address: number, data: number) : void {
-	};
-
-	writeWord(address: number, data: number) : void {
 	};
 }
 
@@ -94,22 +65,13 @@ export class NoMemory implements Memory {
 		return 0;
 	}
 
-	readWord(address: number): number {
-		return 0;
-	}
-
 	writeByte(address: number, data: number) : void {
-	}
-
-	writeWord(address: number, data: number) : void {
 	}
 }
 
-const MEMORY_SIZE_IN_BYTES = Math.pow(2, 16);
+const MEMORY_SIZE_IN_BYTES = 65536;
 
-export class Multiplexor implements Memory {
-
-	private memory = new DataView(new ArrayBuffer(MEMORY_SIZE_IN_BYTES));
+class Multiplexor implements Memory {
 
 	private handlers = new Array<Memory>(MEMORY_SIZE_IN_BYTES);
 
@@ -121,16 +83,8 @@ export class Multiplexor implements Memory {
 		return this.handlers[address].readByte(address);
 	}
 
-	readWord(address: number): number {
-		return this.handlers[address].readWord(address);
-	}
-
 	writeByte(address: number, data: number) : void {
 		this.handlers[address].writeByte(address, data);
-	}
-
-	writeWord(address: number, data: number) : void {
-		this.handlers[address].writeWord(address, data);
 	}
 
 	public setHandler(address : number, length : number, handler : Memory) : void {
@@ -154,7 +108,7 @@ class ExidyCharacters extends Ram {
 	private charUpdated : (char: number) => void;
 
 	public constructor(
-		memory : DataView,
+		memory : Uint8Array,
 		byteCanvas : HTMLCanvasElement,
 		charsCanvas : HTMLCanvasElement,
 		charUpdated : (char: number) => void)
@@ -180,14 +134,6 @@ class ExidyCharacters extends Ram {
 		if(address >= 0xFC00 && (data !== this.readByte(address))) {
 			super.writeByte(address, data);
 			this.charUpdated(this.updateByte(address, data));
-		}
-	}
-
-	writeWord(address: number, data: number) : void {
-		if(address >= 0xFC00) {
-			super.writeWord(address, data);
-			this.updateByte(address, data & 0xff);
-			this.updateByte(address, (data >> 8) & 0xff);
 		}
 	}
 
@@ -220,7 +166,7 @@ class ExidyScreen extends Ram {
 	private screenCtx : CanvasRenderingContext2D;
 
 	public constructor(
-		memory : DataView,
+		memory : Uint8Array,
 		charsCanvas : HTMLCanvasElement,
 		screenCanvas : HTMLCanvasElement)
 	{
@@ -235,12 +181,6 @@ class ExidyScreen extends Ram {
 			super.writeByte(address, data);
 			this.updateByte(address, data);
 		}
-	}
-
-	writeWord(address: number, data: number) : void {
-		super.writeWord(address, data);
-		this.updateByte(address, data & 0xff);
-		this.updateByte(address + 1, (data >> 8) & 0xff);
 	}
 
 	private updateByte(address: number, data: number) : void {
@@ -273,10 +213,10 @@ class ExidyScreen extends Ram {
 
 export class MemorySystem {
 
-	private dataview = new DataView(new ArrayBuffer(MEMORY_SIZE_IN_BYTES));
+	private _memory = new Uint8Array(MEMORY_SIZE_IN_BYTES);
 
-	private ram = new Ram(this.dataview);
-	private rom = new Rom(this.dataview);
+	private ram = new Ram(this._memory);
+	private rom = new Rom(this._memory);
 
 	private multplexor = new Multiplexor();
 
@@ -289,8 +229,11 @@ export class MemorySystem {
 		screenCanvas : HTMLCanvasElement)
 	{
 		this.multplexor.setHandler(0, MEMORY_SIZE_IN_BYTES, this.ram);
-		this.exidyScreen = new ExidyScreen(this.dataview, charsCanvas, screenCanvas);
-		this.exidyCharacters = new ExidyCharacters(this.dataview, byteCanvas, charsCanvas, (char) => {
+
+		this.multplexor.setHandler(0xF800, 0xFE00 - 0xF800, this.rom);
+
+		this.exidyScreen = new ExidyScreen(this._memory, charsCanvas, screenCanvas);
+		this.exidyCharacters = new ExidyCharacters(this._memory, byteCanvas, charsCanvas, (char) => {
 			this.exidyScreen.charUpdated(char);
 		});
 		this.multplexor.setHandler(SCREEN_START, SCREEN_SIZE_BYTES, this.exidyScreen);
@@ -300,13 +243,13 @@ export class MemorySystem {
 	public load(data : Uint8Array, address : number, start : number = 0) : void {
 		let len = data.length - start;
 		for(let i = 0; i < len; ++i) {
-			this.dataview.setUint8(address + i, data[i + start]);
+			this._memory[address + i] = data[i + start];
 		}
 	}
 
 	public loadRom(data : Uint8Array, address : number) : void {
 		for(let i = 0; i < data.length; ++i) {
-			this.dataview.setUint8(address + i, data[i]);
+			this._memory[address + i] = data[i];
 		}
 		this.multplexor.setHandler(address, data.length, this.rom);
 	}

@@ -1,4 +1,8 @@
+"use strict"
+
 import { Memory } from './ExidyMemory'
+import Input from './ExidyInput';
+import Output from './ExidyOutput';
 
 declare function Z80(core : any) : void;
 
@@ -6,12 +10,16 @@ export class ExidyZ80 {
 
 	private cpu : any;
 
-	public constructor(memory : Memory) {
+	public constructor(
+		memory : Memory,
+		input : Input,
+		output : Output
+	) {
 		this.cpu = new Z80({
 			mem_read : (address) => { return memory.readByte(address); },
 			mem_write : (address, data) => { memory.writeByte(address, data); },
-			io_read : (adddress) => { return 0xff; },
-			io_write :  (address, data) => {}
+			io_read : (address) => { return input.readByte(address); },
+			io_write :  (address, data) => { output.writeByte(address, data); }
 		});
 	}
 
