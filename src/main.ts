@@ -16,13 +16,15 @@ let exidySorcerer = new ExidySorcerer(
 //exidySorcerer.load('galx.snp');
 
 screenCanvas.addEventListener('keydown', (key) => {
-	console.log(key);
 	keyboard.browserKeyDown(key.keyCode);
+	key.stopPropagation();
+	key.preventDefault();
 });
 
 screenCanvas.addEventListener('keyup', (key) => {
-	console.log(key);
 	keyboard.browserKeyUp(key.keyCode);
+	key.stopPropagation();
+	key.preventDefault();
 });
 
 exidySorcerer.run();

@@ -298,6 +298,22 @@ Z80.prototype.interrupt = function(non_maskable, data)
    }
 };
 
+// The register-to-register loads and ALU instructions
+//  are all so uniform that we can decode them directly
+//  instead of going into the instruction array for them.
+// This function gets the operand for all of these instructions.
+var get_operand = function(opcode)
+{
+  var opcodeLowerBits = opcode & 0x07;
+  return (opcodeLowerBits === 0) ? this.b :
+         (opcodeLowerBits === 1) ? this.c :
+         (opcodeLowerBits === 2) ? this.d :
+         (opcodeLowerBits === 3) ? this.e :
+         (opcodeLowerBits === 4) ? this.h :
+         (opcodeLowerBits === 5) ? this.l :
+         (opcodeLowerBits === 6) ? this.core.mem_read(this.l | (this.h << 8)) : this.a;
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 /// The public API functions end here.
 ///
@@ -305,20 +321,7 @@ Z80.prototype.interrupt = function(non_maskable, data)
 ///////////////////////////////////////////////////////////////////////////////
 Z80.prototype.decode_instruction = function(opcode)
 {
-   // The register-to-register loads and ALU instructions
-   //  are all so uniform that we can decode them directly
-   //  instead of going into the instruction array for them.
-   // This function gets the operand for all of these instructions.
-   var get_operand = function(opcode)
-   {
-      return ((opcode & 0x07) === 0) ? this.b :
-             ((opcode & 0x07) === 1) ? this.c :
-             ((opcode & 0x07) === 2) ? this.d :
-             ((opcode & 0x07) === 3) ? this.e :
-             ((opcode & 0x07) === 4) ? this.h :
-             ((opcode & 0x07) === 5) ? this.l :
-             ((opcode & 0x07) === 6) ? this.core.mem_read(this.l | (this.h << 8)) : this.a;
-   };
+
 
    // Handle HALT right up front, because it fouls up our LD decoding
    //  by falling where LD (HL), (HL) ought to be.
@@ -333,22 +336,23 @@ Z80.prototype.decode_instruction = function(opcode)
       // This entire range is all 8-bit register loads.
       // Get the operand and assign it to the correct destination.
       var operand = get_operand.call(this, opcode);
+      var operandShifted = (opcode & 0x38) >>> 3;
 
-      if (((opcode & 0x38) >>> 3) === 0)
+      if (operandShifted === 0)
          this.b = operand;
-      else if (((opcode & 0x38) >>> 3) === 1)
+      else if (operandShifted === 1)
          this.c = operand;
-      else if (((opcode & 0x38) >>> 3) === 2)
+      else if (operandShifted === 2)
          this.d = operand;
-      else if (((opcode & 0x38) >>> 3) === 3)
+      else if (operandShifted === 3)
          this.e = operand;
-      else if (((opcode & 0x38) >>> 3) === 4)
+      else if (operandShifted === 4)
          this.h = operand;
-      else if (((opcode & 0x38) >>> 3) === 5)
+      else if (operandShifted === 5)
          this.l = operand;
-      else if (((opcode & 0x38) >>> 3) === 6)
+      else if (operandShifted === 6)
          this.core.mem_write(this.l | (this.h << 8), operand);
-      else if (((opcode & 0x38) >>> 3) === 7)
+      else if (operandShifted === 7)
          this.a = operand;
    }
    else if ((opcode >= 0x80) && (opcode < 0xc0))
@@ -356,8 +360,9 @@ Z80.prototype.decode_instruction = function(opcode)
       // These are the 8-bit register ALU instructions.
       // We'll get the operand and then use this "jump table"
       //  to call the correct utility function for the instruction.
-      var operand = get_operand.call(this, opcode),
-          op_array = [this.do_add, this.do_adc, this.do_sub, this.do_sbc,
+      var operand = get_operand.call(this, opcode);
+
+      const op_array = [this.do_add, this.do_adc, this.do_sub, this.do_sbc,
                       this.do_and, this.do_xor, this.do_or, this.do_cp];
 
       op_array[(opcode & 0x38) >>> 3].call(this, operand);
@@ -1642,7 +1647,7 @@ Z80.prototype.instructions[0xcb] = function()
    if (opcode < 0x40)
    {
       // Shift/rotate instructions
-      var op_array = [this.do_rlc, this.do_rrc, this.do_rl, this.do_rr,
+      const op_array = [this.do_rlc, this.do_rrc, this.do_rl, this.do_rr,
                       this.do_sla, this.do_sra, this.do_sll, this.do_srl];
 
       if (reg_code === 0)
@@ -3138,7 +3143,7 @@ Z80.prototype.dd_instructions[0xcb] = function()
    if (opcode < 0x40)
    {
       // Shift and rotate instructions.
-      var ddcb_functions = [this.do_rlc, this.do_rrc, this.do_rl, this.do_rr,
+      const ddcb_functions = [this.do_rlc, this.do_rrc, this.do_rl, this.do_rr,
                             this.do_sla, this.do_sra, this.do_sll, this.do_srl];
 
       // Most of the opcodes in this range are not valid,
