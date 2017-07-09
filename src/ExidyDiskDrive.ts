@@ -167,29 +167,7 @@ export default class ExidyDiskDrive
 		}
 		return 0;
 	}
-/*
-	public write(address : number,  b :number) : void
-	{
-		switch( address )
-		{
-		case 0: this.writeReg0( b ); break;
-		case 1: this.writeReg1( b ); break;
-		case 2: this.writeReg2( b ); break;
-		}
-	}
 
-	public read(address : number)
-	{
-		let r = 0;
-		switch( address )
-		{
-		case 0: r = this.readReg0(); break;
-		case 1: r = this.readReg1(); break;
-		case 2: r = this.readReg2(); break;
-		}
-		return r;
-	}
-*/
 	public tick() : void
 	{
 		if( this.active() )

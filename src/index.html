@@ -3,9 +3,22 @@
 		<script src="lib/require.js"></script>
 		<script src="lib/Z80.js"></script>
 		<script src="./build.js" data-main="main"></script>
+		 <style>
+			#exidyScreen {
+				image-rendering: optimizeSpeed;
+				image-rendering: -moz-crisp-edges;
+				image-rendering: -webkit-optimize-contrast;
+				image-rendering: optimize-contrast;
+				image-rendering: pixelated;
+				-ms-interpolation-mode: nearest-neighbor;
+				border:10px solid #ccc;
+				border-radius: 8px;
+				width: 512px; height: 480px;
+			}
+		</style>
 	</head>
 	<body>
-		<canvas tabindex='0' id="exidyScreen" width="512" height="480" style="border:10px solid #ccc;border-radius: 8px">
+		<canvas tabindex='0' id="exidyScreen" width="512" height="240">
 		</canvas>
 		<canvas style='display:none' id="exidyCharacters" width="2048" height="8">
 		</canvas>

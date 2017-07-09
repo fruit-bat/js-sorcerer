@@ -169,7 +169,7 @@ class ExidyScreen extends Ram {
 		let row = index >> 6;
 		let col = index - (row << 6);
 		let char = this.readByte(address);
-		this.screenCtx.drawImage(this.charsCanvas, char << 3, 0, 8, 8, col << 3, row << 4, 8, 16);
+		this.screenCtx.drawImage(this.charsCanvas, char << 3, 0, 8, 8, col << 3, row << 3, 8, 8);
 	}
 
 	public charUpdated(updatedChar: number) : void {
@@ -182,12 +182,9 @@ class ExidyScreen extends Ram {
 	}
 
 	public updateAll() : void {
-		let address = SCREEN_START;
-		for(let row = 0; row < SCREEN_HEIGHT; ++row) {
-			for(let col = 0; col < SCREEN_WIDTH; ++col) {
-				let char = this.readByte(address++);
-				this.screenCtx.drawImage(this.charsCanvas, char << 3, 0, 8, 8, col << 3, row << 4, 8, 16);
-			}
+		for(let address = SCREEN_START ; address < SCREEN_START + SCREEN_SIZE_BYTES ; ++address) {
+			let char = this.readByte(address);
+			this.updateByte(address, char);
 		}
 	}
 }
