@@ -13,7 +13,15 @@ let exidySorcerer = new ExidySorcerer(
 	<HTMLCanvasElement>document.getElementById('exidyBytes'),
 	<HTMLCanvasElement>document.getElementById('exidyCharacters'),
 	screenCanvas);
+
 //exidySorcerer.load('galx.snp');
+//exidySorcerer.loadRomPack('Exidy Standard Basic Ver 1.0 (1978).ROM');
+//exidySorcerer.loadRomPack('Exidy Z80 Development Pac (1979).ROM');
+//exidySorcerer.loadRomPack('Exidy Word Processor Pac (1979).ROM');
+//exidySorcerer.loadDisk(0, 'disk1.dsk');
+//exidySorcerer.loadDisk(1, 'disk2.dsk');
+//exidySorcerer.loadDisk(2, 'disk3.dsk');
+//exidySorcerer.loadDisk(3, 'disk4.dsk');
 
 screenCanvas.addEventListener('keydown', (key) => {
 	keyboard.browserKeyDown(key.keyCode);

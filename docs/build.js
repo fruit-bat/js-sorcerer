@@ -60,6 +60,35 @@ define("DropZone", ["require", "exports"], function (require, exports) {
     }
     exports.default = DropZone;
 });
+define("ExidyDisk", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.SECTORS_PER_TRACK = 16;
+    exports.NUMBER_OF_TRACKS = 77;
+    exports.BYTES_PER_SECTOR = 256 + 14;
+});
+define("ExidyArrayDisk", ["require", "exports", "ExidyDisk"], function (require, exports, ExidyDisk_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class ExidyArrayDisk {
+        constructor(data) {
+            this._data = data;
+        }
+        toIndex(track, sector, offset) {
+            return (sector * ExidyDisk_1.BYTES_PER_SECTOR) + (track * ExidyDisk_1.SECTORS_PER_TRACK * ExidyDisk_1.BYTES_PER_SECTOR) + offset;
+        }
+        read(track, sector, offset) {
+            return this._data[this.toIndex(track, sector, offset)];
+        }
+        write(track, sector, offset, data) {
+        }
+        activate() {
+        }
+        deactivate() {
+        }
+    }
+    exports.default = ExidyArrayDisk;
+});
 define("ExidyInput", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -221,80 +250,156 @@ define("ExidyCpu", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
 });
-define("ExidyFile", ["require", "exports"], function (require, exports) {
+define("ExidyDiskDrive", ["require", "exports", "ExidyDisk"], function (require, exports, ExidyDisk_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-});
-define("ExidyFileBinaryAjax", ["require", "exports", "BinaryAjax"], function (require, exports, BinaryAjax_1) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    class ExidyFileBinaryAjax {
-        read(url) {
-            return BinaryAjax_1.default.read(url).then((data) => {
-                console.log('Read ' + url);
-                return data;
-            });
+    const ACTIVE_FOR_TICKS = 800;
+    class ExidyDiskDrive {
+        constructor(unitNumber) {
+            this._activeCount = 0;
+            this._sectorNumber = 0;
+            this._trackNumber = 0;
+            this._newSector = false;
+            this._disk = null;
+            this._sectorIndex = 0;
+            this._writeIndex = 0;
+            this._unitNumber = unitNumber;
         }
-    }
-    exports.default = ExidyFileBinaryAjax;
-});
-define("ExidyIo", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    class NoInput {
-        readByte(address) {
-            return 255;
+        getUnitLetter() {
+            return "ABCD".charAt(this._unitNumber);
         }
-    }
-    class NoOutput {
-        writeByte(address, data) {
+        set disk(disk) {
+            this._disk = disk;
         }
-    }
-    class InputMultiplexor {
-        constructor() {
-            this.handlers = new Array(256);
-            this.handlers.fill(new NoInput());
+        get disk() {
+            return this._disk;
         }
-        readByte(address) {
-            return this.handlers[address & 0xFF].readByte(address);
+        diskIn() {
+            return this._disk != null;
         }
-        setHandler(address, length, handler) {
-            for (let i = 0; i < length; ++i) {
-                this.handlers[address + i] = handler;
+        dataReady() {
+            return true;
+        }
+        home() {
+            return this._trackNumber == 0;
+        }
+        stepForward() {
+            if (this._trackNumber < (ExidyDisk_2.NUMBER_OF_TRACKS - 1)) {
+                ++this._trackNumber;
+            }
+        }
+        stepBackward() {
+            if (this._trackNumber > 0) {
+                --this._trackNumber;
+            }
+        }
+        active() {
+            return this._activeCount > 0;
+        }
+        activate() {
+            if (this._activeCount == 0 && this._disk != null) {
+                this._disk.activate();
+                this._activeCount = ACTIVE_FOR_TICKS;
+            }
+        }
+        writeReg0(b) {
+            switch (b) {
+                case 0xA0:
+                    break;
+                case 0x20:
+                case 0x21:
+                    this.activate();
+                    break;
+                case 0x60:
+                    this.stepBackward();
+                    break;
+                case 0x61:
+                    this.stepForward();
+                    break;
+            }
+        }
+        readyWrite() {
+            this._writeIndex = 0;
+        }
+        writeReg1(b) {
+            switch (b) {
+                case 0xA0:
+                    break;
+                case 0x20:
+                case 0x21:
+                    this.activate();
+                    break;
+                case 0x60:
+                    this.stepBackward();
+                    break;
+                case 0x61:
+                    this.stepForward();
+                    break;
+            }
+        }
+        writeReg2(b) {
+            if (this.active()) {
+                this._activeCount = ACTIVE_FOR_TICKS;
+            }
+            this._disk.write(this._trackNumber, this._sectorNumber, this._writeIndex++, b);
+        }
+        readReg0() {
+            if (this.active()) {
+                this._activeCount = ACTIVE_FOR_TICKS;
+            }
+            let r = this._sectorNumber;
+            if (this._newSector) {
+                r |= 0x80;
+                this._newSector = false;
+            }
+            return r;
+        }
+        readReg1() {
+            let r = 0;
+            if (this.active())
+                r |= 0x20;
+            if (this.home())
+                r |= 0x08;
+            if (this.dataReady())
+                r |= 0x80;
+            return r;
+        }
+        readReg2() {
+            if (this.active()) {
+                this._activeCount = ACTIVE_FOR_TICKS;
+            }
+            if (this._disk != null) {
+                if (this._sectorIndex < ExidyDisk_2.BYTES_PER_SECTOR) {
+                    let data = this._disk.read(this._trackNumber, this._sectorNumber, this._sectorIndex++);
+                    return data & 0xff;
+                }
+            }
+            return 0;
+        }
+        tick() {
+            if (this.active()) {
+                this._sectorNumber++;
+                this._sectorIndex = 0;
+                if (this._sectorNumber >= ExidyDisk_2.SECTORS_PER_TRACK) {
+                    this._sectorNumber = 0;
+                }
+                this._newSector = true;
+                this._activeCount--;
+                if (!this.active()) {
+                    if (this._disk != null) {
+                        this._disk.deactivate();
+                    }
+                }
             }
         }
     }
-    class OutputMultiplexor {
-        constructor() {
-            this.handlers = new Array(256);
-            this.handlers.fill(new NoOutput());
-        }
-        writeByte(address, data) {
-            this.handlers[address & 0xFF].writeByte(address, data);
-        }
-        setHandler(address, length, handler) {
-            for (let i = 0; i < length; ++i) {
-                this.handlers[address + i] = handler;
-            }
-        }
-    }
-    class IoSystem {
-        constructor(keyboard) {
-            this._input = new InputMultiplexor();
-            this._output = new OutputMultiplexor();
-            this._output.setHandler(0xFE, 1, keyboard);
-            this._input.setHandler(0xFE, 1, keyboard);
-        }
-        get output() {
-            return this._output;
-        }
-        get input() {
-            return this._input;
-        }
-    }
-    exports.IoSystem = IoSystem;
+    exports.default = ExidyDiskDrive;
 });
 define("ExidyMemory", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+});
+define("ExidyMemorySystem", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class Ram {
@@ -470,8 +575,269 @@ define("ExidyMemory", ["require", "exports"], function (require, exports) {
         updateScreen() {
             this.exidyScreen.updateAll();
         }
+        setHandler(address, length, handler) {
+            this.multplexor.setHandler(address, length, handler);
+        }
     }
-    exports.MemorySystem = MemorySystem;
+    exports.default = MemorySystem;
+});
+define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive"], function (require, exports, ExidyDiskDrive_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    const MEM_DISK_REG_START = 0xBE00;
+    const MEM_DISK_REG_LEN = 3;
+    class ExidyDiskSystem {
+        constructor(memorySystem) {
+            this._drives = new Array(4);
+            this._activeDrive = null;
+            this._activeDriveNumber = 0x40;
+            for (let i = 0; i < this._drives.length; ++i) {
+                this._drives[i] = new ExidyDiskDrive_1.default(i);
+            }
+            memorySystem.setHandler(MEM_DISK_REG_START, MEM_DISK_REG_LEN, this);
+        }
+        getExidyDiskDrive(drive) {
+            return this._drives[drive];
+        }
+        insertDisk(disk, drive) {
+            this._drives[drive].disk = disk;
+        }
+        dataReady() {
+            if (this._activeDrive != null) {
+                return this._activeDrive.dataReady();
+            }
+            else {
+                return false;
+            }
+        }
+        home() {
+            if (this._activeDrive != null) {
+                return this._activeDrive.home();
+            }
+            else {
+                return false;
+            }
+        }
+        stepForward() {
+            if (this._activeDrive != null) {
+                this._activeDrive.stepForward();
+            }
+        }
+        stepBackward() {
+            if (this._activeDrive != null) {
+                this._activeDrive.stepBackward();
+            }
+        }
+        readyWrite() {
+            if (this._activeDrive != null) {
+                this._activeDrive.readyWrite();
+            }
+        }
+        activate(drive) {
+            this._activeDriveNumber = drive;
+            this._activeDrive = this._drives[drive];
+            this._activeDrive.activate();
+        }
+        active() {
+            return this._activeDrive != null;
+        }
+        writeReg0(b) {
+            switch (b) {
+                case 0xA0: break;
+                case 0x20:
+                    this.activate(0);
+                    break;
+                case 0x21:
+                    this.activate(1);
+                    break;
+                case 0x22:
+                    this.activate(2);
+                    break;
+                case 0x23:
+                    this.activate(3);
+                    break;
+                case 0x60:
+                    this.stepBackward();
+                    break;
+                case 0x61:
+                    this.stepForward();
+                    break;
+                case 0x80:
+                    this.readyWrite();
+                    break;
+            }
+        }
+        writeReg1(b) {
+            switch (b) {
+                case 0xA0: break;
+                case 0x20:
+                    this.activate(0);
+                    break;
+                case 0x21:
+                    this.activate(1);
+                    break;
+                case 0x22:
+                    this.activate(2);
+                    break;
+                case 0x23:
+                    this.activate(3);
+                    break;
+                case 0x60:
+                    this.stepBackward();
+                    break;
+                case 0x61:
+                    this.stepForward();
+                    break;
+                case 0x80:
+                    this.readyWrite();
+                    break;
+            }
+        }
+        writeReg2(b) {
+            if (this._activeDrive != null) {
+                this._activeDrive.writeReg2(b);
+            }
+        }
+        readReg0() {
+            if (this._activeDrive != null) {
+                return this._activeDrive.readReg0();
+            }
+            else {
+                return 0;
+            }
+        }
+        readReg1() {
+            let r = this._activeDriveNumber;
+            if (this.active())
+                r |= 0x20;
+            if (this.home())
+                r |= 0x08;
+            if (this.dataReady())
+                r |= 0x80;
+            return r;
+        }
+        readReg2() {
+            if (this._activeDrive != null) {
+                return this._activeDrive.readReg2();
+            }
+            else {
+                return 0;
+            }
+        }
+        writeByte(address, b) {
+            switch (address - MEM_DISK_REG_START) {
+                case 0:
+                    this.writeReg0(b);
+                    break;
+                case 1:
+                    this.writeReg1(b);
+                    break;
+                case 2:
+                    this.writeReg2(b);
+                    break;
+            }
+        }
+        readByte(address) {
+            let r = 0;
+            switch (address - MEM_DISK_REG_START) {
+                case 0:
+                    r = this.readReg0();
+                    break;
+                case 1:
+                    r = this.readReg1();
+                    break;
+                case 2:
+                    r = this.readReg2();
+                    break;
+            }
+            return r;
+        }
+        tick() {
+            for (let i = 0; i < this._drives.length; ++i) {
+                this._drives[i].tick();
+            }
+            if (this._activeDrive != null) {
+                if (this._activeDrive.active() == false) {
+                    this._activeDrive = null;
+                    this._activeDriveNumber = 0x40;
+                }
+            }
+        }
+    }
+    exports.default = ExidyDiskSystem;
+});
+define("ExidyFile", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+});
+define("ExidyFileBinaryAjax", ["require", "exports", "BinaryAjax"], function (require, exports, BinaryAjax_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class ExidyFileBinaryAjax {
+        read(url) {
+            return BinaryAjax_1.default.read(url).then((data) => {
+                console.log('Read ' + url);
+                return data;
+            });
+        }
+    }
+    exports.default = ExidyFileBinaryAjax;
+});
+define("ExidyIo", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class NoInput {
+        readByte(address) {
+            return 255;
+        }
+    }
+    class NoOutput {
+        writeByte(address, data) {
+        }
+    }
+    class InputMultiplexor {
+        constructor() {
+            this.handlers = new Array(256);
+            this.handlers.fill(new NoInput());
+        }
+        readByte(address) {
+            return this.handlers[address & 0xFF].readByte(address);
+        }
+        setHandler(address, length, handler) {
+            for (let i = 0; i < length; ++i) {
+                this.handlers[address + i] = handler;
+            }
+        }
+    }
+    class OutputMultiplexor {
+        constructor() {
+            this.handlers = new Array(256);
+            this.handlers.fill(new NoOutput());
+        }
+        writeByte(address, data) {
+            this.handlers[address & 0xFF].writeByte(address, data);
+        }
+        setHandler(address, length, handler) {
+            for (let i = 0; i < length; ++i) {
+                this.handlers[address + i] = handler;
+            }
+        }
+    }
+    class IoSystem {
+        constructor(keyboard) {
+            this._input = new InputMultiplexor();
+            this._output = new OutputMultiplexor();
+            this._output.setHandler(0xFE, 1, keyboard);
+            this._input.setHandler(0xFE, 1, keyboard);
+        }
+        get output() {
+            return this._output;
+        }
+        get input() {
+            return this._input;
+        }
+    }
+    exports.IoSystem = IoSystem;
 });
 define("ExidyZ80", ["require", "exports"], function (require, exports) {
     "use strict";
@@ -489,7 +855,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
             this.cpu.reset(address);
         }
         executeInstruction() {
-            this.cpu.run_instruction();
+            return this.cpu.run_instruction();
         }
         load(data) {
             this.cpu.load({
@@ -523,7 +889,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     }
     exports.ExidyZ80 = ExidyZ80;
 });
-define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMemory", "ExidyIo"], function (require, exports, ExidyZ80_1, DropZone_1, ExidyMemory_1, ExidyIo_1) {
+define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMemorySystem", "ExidyIo", "ExidyArrayDisk", "ExidyDiskSystem"], function (require, exports, ExidyZ80_1, DropZone_1, ExidyMemorySystem_1, ExidyIo_1, ExidyArrayDisk_1, ExidyDiskSystem_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const defaultRoms = [
@@ -532,24 +898,30 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
         { name: "exchr-1.dat", address: 0xF800 },
         { name: "diskboot.dat", address: 0xBC00 }
     ];
+    const CYCLES_PER_DISK_TICK = 100000;
     class ExidySorcerer {
         constructor(filesystem, keyboard, byteCanvas, charsCanvas, screenCanvas) {
             this.filesystem = filesystem;
-            this.memorySystem = new ExidyMemory_1.MemorySystem(byteCanvas, charsCanvas, screenCanvas);
+            this.memorySystem = new ExidyMemorySystem_1.default(byteCanvas, charsCanvas, screenCanvas);
             this.io = new ExidyIo_1.IoSystem(keyboard);
             this.cpu = new ExidyZ80_1.ExidyZ80(this.memorySystem.memory, this.io.input, this.io.output);
             this.ready = Promise.all(defaultRoms.map((romConfig) => {
                 return filesystem.read('roms/' + romConfig.name).then((data) => {
                     this.memorySystem.loadRom(data, romConfig.address);
-                    this.memorySystem.updateCharacters();
-                    this.memorySystem.updateScreen();
-                    this.reset();
-                    return true;
                 });
-            }));
+            })).then(() => {
+                this.diskSystem = new ExidyDiskSystem_1.default(this.memorySystem);
+            }).then(() => {
+                this.memorySystem.updateCharacters();
+                this.memorySystem.updateScreen();
+                this.reset();
+            });
             new DropZone_1.default(screenCanvas, (buffer) => {
                 this.loadSnpFromArray(new Uint8Array(buffer));
             });
+        }
+        loadRomFromArray(data) {
+            this.memorySystem.loadRom(data, 0xC000);
         }
         loadSnpFromArray(data) {
             this.memorySystem.load(data, 0x0000, 28);
@@ -561,23 +933,42 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
             this.ready = this.ready.then(() => {
                 return this.filesystem.read('snaps/' + snap).then((data) => {
                     this.loadSnpFromArray(data);
-                    return true;
+                });
+            });
+        }
+        loadRomPack(rom) {
+            this.ready = this.ready.then(() => {
+                return this.filesystem.read('rom-packs/' + rom).then((data) => {
+                    this.loadRomFromArray(data);
+                });
+            });
+        }
+        loadDisk(unit, file) {
+            this.ready = this.ready.then(() => {
+                return this.filesystem.read('disks/' + file).then((data) => {
+                    let disk = new ExidyArrayDisk_1.default(data);
+                    this.diskSystem.insertDisk(disk, unit);
                 });
             });
         }
         reset() {
+            this.cycles = 0;
             this.cpu.reset(0xE000);
         }
         step() {
             for (let i = 0; i < 3000; ++i) {
-                this.cpu.executeInstruction();
+                this.cycles += this.cpu.executeInstruction();
+                if (this.cycles > CYCLES_PER_DISK_TICK) {
+                    this.cycles -= CYCLES_PER_DISK_TICK;
+                    this.diskSystem.tick();
+                }
             }
         }
         run() {
             this.ready.then(() => {
                 setInterval(() => {
                     this.step();
-                }, 0);
+                }, 1);
             });
         }
     }

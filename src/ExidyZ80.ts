@@ -1,6 +1,6 @@
 "use strict"
 
-import { Memory } from './ExidyMemory'
+import Memory from './ExidyMemory'
 import Input from './ExidyInput';
 import Output from './ExidyOutput';
 
@@ -27,8 +27,8 @@ export class ExidyZ80 {
 		this.cpu.reset(address);
 	}
 
-	public executeInstruction() : void {
-		this.cpu.run_instruction();
+	public executeInstruction() : number {
+		return this.cpu.run_instruction();
 	}
 
 	public load(data : Uint8Array) :void {
