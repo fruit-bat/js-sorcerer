@@ -2,8 +2,11 @@ import ExidySorcerer from './ExidySorcerer'
 import ExidyFile from './ExidyFile'
 import ExidyFileBinaryAjax from './ExidyFileBinaryAjax'
 import BrowserKeyboard from './ExidyBrowserKeyboard';
+import ElementPrinter from './ExidyElementPrinter';
 
 let screenCanvas = <HTMLCanvasElement>document.getElementById('exidyScreen');
+let printerPaper = <HTMLElement>document.getElementById('exidyPaper');
+
 let exidyFile : ExidyFile = new ExidyFileBinaryAjax();
 let keyboard = new BrowserKeyboard();
 
@@ -35,5 +38,9 @@ screenCanvas.addEventListener('keyup', (key) => {
 	key.stopPropagation();
 	key.preventDefault();
 });
+
+let printer = new ElementPrinter(printerPaper);
+
+exidySorcerer.centronics = printer;
 
 exidySorcerer.run();

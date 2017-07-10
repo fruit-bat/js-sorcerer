@@ -90,14 +90,6 @@ define("ExidyArrayDisk", ["require", "exports", "ExidyDisk"], function (require,
     }
     exports.default = ExidyArrayDisk;
 });
-define("ExidyInput", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-});
-define("ExidyOutput", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-});
 define("ExidyTape", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -121,6 +113,14 @@ define("ExidyArrayTape", ["require", "exports"], function (require, exports) {
         }
     }
     exports.default = ArrayTape;
+});
+define("ExidyInput", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+});
+define("ExidyOutput", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
 });
 define("ExidyKeyboard", ["require", "exports"], function (require, exports) {
     "use strict";
@@ -270,6 +270,27 @@ define("ExidyBrowserKeyboard", ["require", "exports", "ExidyKeyboard"], function
         }
     }
     exports.default = BrowserKeyboard;
+});
+define("ExidyCentronics", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+});
+define("ExidyCentronicsSystem", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class CentronicsSystem {
+        set device(device) {
+            this._device = device;
+        }
+        readByte(address) {
+            return this._device ? this._device.readByte() : 0xff;
+        }
+        writeByte(address, data) {
+            if (this._device)
+                this._device.writeByte(data);
+        }
+    }
+    exports.default = CentronicsSystem;
 });
 define("ExidyCpu", ["require", "exports"], function (require, exports) {
     "use strict";
@@ -737,12 +758,7 @@ define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive"], function (re
             return r;
         }
         readReg2() {
-            if (this._activeDrive != null) {
-                return this._activeDrive.readReg2();
-            }
-            else {
-                return 0;
-            }
+            return this._activeDrive == null ? 0 : this._activeDrive.readReg2();
         }
         writeByte(address, b) {
             switch (address - MEM_DISK_REG_START) {
@@ -758,19 +774,12 @@ define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive"], function (re
             }
         }
         readByte(address) {
-            let r = 0;
             switch (address - MEM_DISK_REG_START) {
-                case 0:
-                    r = this.readReg0();
-                    break;
-                case 1:
-                    r = this.readReg1();
-                    break;
-                case 2:
-                    r = this.readReg2();
-                    break;
+                case 0: return this.readReg0();
+                case 1: return this.readReg1();
+                case 2: return this.readReg2();
             }
-            return r;
+            return 0;
         }
         tick() {
             for (let i = 0; i < this._drives.length; ++i) {
@@ -785,6 +794,39 @@ define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive"], function (re
         }
     }
     exports.default = ExidyDiskSystem;
+});
+define("ExidyElementPrinter", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class ElementPrinter {
+        constructor(element) {
+            this._encodeHTMLmap = {
+                "&": "&amp;",
+                "'": "&#39;",
+                '"': "&quot;",
+                "<": "&lt;",
+                ">": "&gt;"
+            };
+            this._element = element;
+        }
+        readByte() {
+            return 0x7f;
+        }
+        escape(char) {
+            let r = this._encodeHTMLmap.char;
+            return r ? r : char;
+        }
+        writeByte(data) {
+            let clock = (data & 0x80) != 0;
+            if (!clock) {
+                let char = data & 0x7f;
+                if (char == 0x0a)
+                    return;
+                this._element.innerHTML += this.escape(String.fromCharCode(char));
+            }
+        }
+    }
+    exports.default = ElementPrinter;
 });
 define("ExidyFile", ["require", "exports"], function (require, exports) {
     "use strict";
@@ -1044,7 +1086,7 @@ define("ExidyTapeSystem", ["require", "exports", "ExidyTapeUnit", "ExidyTapeUnit
     }
     exports.default = TapeSystem;
 });
-define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMemorySystem", "ExidyIo", "ExidyArrayDisk", "ExidyDiskSystem", "ExidyTapeSystem", "ExidyArrayTape"], function (require, exports, ExidyZ80_1, DropZone_1, ExidyMemorySystem_1, ExidyIo_1, ExidyArrayDisk_1, ExidyDiskSystem_1, ExidyTapeSystem_1, ExidyArrayTape_1) {
+define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMemorySystem", "ExidyIo", "ExidyArrayDisk", "ExidyDiskSystem", "ExidyTapeSystem", "ExidyArrayTape", "ExidyCentronicsSystem"], function (require, exports, ExidyZ80_1, DropZone_1, ExidyMemorySystem_1, ExidyIo_1, ExidyArrayDisk_1, ExidyDiskSystem_1, ExidyTapeSystem_1, ExidyArrayTape_1, ExidyCentronicsSystem_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const defaultRoms = [
@@ -1057,6 +1099,7 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
     class ExidySorcerer {
         constructor(filesystem, keyboard, byteCanvas, charsCanvas, screenCanvas) {
             this.typeSystem = new ExidyTapeSystem_1.default();
+            this.centronicsSystem = new ExidyCentronicsSystem_1.default();
             this.filesystem = filesystem;
             this.memorySystem = new ExidyMemorySystem_1.default(byteCanvas, charsCanvas, screenCanvas);
             this.io = new ExidyIo_1.IoSystem();
@@ -1066,6 +1109,8 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
             this.io.output.addHandler(0xFC, this.typeSystem.dataOutput);
             this.io.input.setHandler(0xFC, this.typeSystem.dataInput);
             this.io.input.setHandler(0xFD, this.typeSystem.status);
+            this.io.input.setHandler(0xFF, this.centronicsSystem);
+            this.io.output.addHandler(0xFF, this.centronicsSystem);
             this.cpu = new ExidyZ80_1.ExidyZ80(this.memorySystem.memory, this.io.input, this.io.output);
             this.ready = Promise.all(defaultRoms.map((romConfig) => {
                 return filesystem.read('roms/' + romConfig.name).then((data) => {
@@ -1120,6 +1165,9 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
                 });
             });
         }
+        set centronics(device) {
+            this.centronicsSystem.device = device;
+        }
         reset() {
             this.cycles = 0;
             this.cpu.reset(0xE000);
@@ -1143,10 +1191,11 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
     }
     exports.default = ExidySorcerer;
 });
-define("main", ["require", "exports", "ExidySorcerer", "ExidyFileBinaryAjax", "ExidyBrowserKeyboard"], function (require, exports, ExidySorcerer_1, ExidyFileBinaryAjax_1, ExidyBrowserKeyboard_1) {
+define("main", ["require", "exports", "ExidySorcerer", "ExidyFileBinaryAjax", "ExidyBrowserKeyboard", "ExidyElementPrinter"], function (require, exports, ExidySorcerer_1, ExidyFileBinaryAjax_1, ExidyBrowserKeyboard_1, ExidyElementPrinter_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     let screenCanvas = document.getElementById('exidyScreen');
+    let printerPaper = document.getElementById('exidyPaper');
     let exidyFile = new ExidyFileBinaryAjax_1.default();
     let keyboard = new ExidyBrowserKeyboard_1.default();
     let exidySorcerer = new ExidySorcerer_1.default(exidyFile, keyboard, document.getElementById('exidyBytes'), document.getElementById('exidyCharacters'), screenCanvas);
@@ -1160,5 +1209,7 @@ define("main", ["require", "exports", "ExidySorcerer", "ExidyFileBinaryAjax", "E
         key.stopPropagation();
         key.preventDefault();
     });
+    let printer = new ExidyElementPrinter_1.default(printerPaper);
+    exidySorcerer.centronics = printer;
     exidySorcerer.run();
 });

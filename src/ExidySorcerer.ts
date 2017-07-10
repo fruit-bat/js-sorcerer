@@ -10,6 +10,8 @@ import ExidyArrayDisk from './ExidyArrayDisk'
 import ExidyDiskSystem from './ExidyDiskSystem'
 import TapeSystem from './ExidyTapeSystem'
 import ArrayTape from './ExidyArrayTape'
+import Centronics from './ExidyCentronics'
+import CentronicsSystem from './ExidyCentronicsSystem'
 
 const defaultRoms = [
 	{ name: "exmo1-1.dat", address: 0xE000 },
@@ -30,6 +32,7 @@ export default class ExidySorcerer {
 	private diskSystem : ExidyDiskSystem;
 	private cycles : number;
 	private typeSystem = new TapeSystem();
+	private centronicsSystem = new CentronicsSystem();
 
 	public constructor(
 		filesystem : ExidyFile,
@@ -48,6 +51,8 @@ export default class ExidySorcerer {
 		this.io.output.addHandler(0xFC, this.typeSystem.dataOutput);
 		this.io.input.setHandler(0xFC, this.typeSystem.dataInput);
 		this.io.input.setHandler(0xFD, this.typeSystem.status);
+		this.io.input.setHandler(0xFF, this.centronicsSystem);
+		this.io.output.addHandler(0xFF, this.centronicsSystem);
 
 		this.cpu = new Z80(this.memorySystem.memory, this.io.input, this.io.output);
 
@@ -110,6 +115,10 @@ export default class ExidySorcerer {
 				this.typeSystem.units[unit].tape = new ArrayTape(data);
 			});
 		});
+	}
+
+	public set centronics(device : Centronics) {
+		this.centronicsSystem.device = device;
 	}
 
 	public reset() : void {
