@@ -41,6 +41,6 @@ screenCanvas.addEventListener('keyup', (key) => {
 
 let printer = new ElementPrinter(printerPaper);
 
-exidySorcerer.centronics = printer;
+//exidySorcerer.centronics = printer;
 
 exidySorcerer.run();

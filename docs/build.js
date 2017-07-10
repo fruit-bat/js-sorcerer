@@ -1238,6 +1238,5 @@ define("main", ["require", "exports", "ExidySorcerer", "ExidyFileBinaryAjax", "E
         key.preventDefault();
     });
     let printer = new ExidyElementPrinter_1.default(printerPaper);
-    exidySorcerer.centronics = printer;
     exidySorcerer.run();
 });

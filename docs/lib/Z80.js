@@ -138,6 +138,7 @@ Z80.prototype.load = function(state)
    this.r = state.r;
    this.imode = state.imode;
    this.pc = state.pc;
+   this.sp = state.sp;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
