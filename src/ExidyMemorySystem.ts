@@ -69,9 +69,7 @@ class Multiplexor implements Memory {
 	}
 
 	public setHandler(address : number, length : number, handler : Memory) : void {
-		for(let i = 0; i < length; ++i) {
-			this.handlers[address + i] = handler;
-		}
+		this.handlers.fill(handler, address, address + length);
 	}
 }
 

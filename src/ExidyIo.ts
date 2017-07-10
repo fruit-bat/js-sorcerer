@@ -2,16 +2,10 @@
 
 import Input from './ExidyInput';
 import Output from './ExidyOutput';
-import Keyboard from './ExidyKeyboard'
 
 class NoInput implements Input {
 	readByte(address: number) : number {
 		return 255;
-	}
-}
-
-class NoOutput implements Output {
-	writeByte(address: number, data: number) : void {
 	}
 }
 
@@ -27,29 +21,31 @@ class InputMultiplexor implements Input {
 		return this.handlers[address & 0xFF].readByte(address);
 	}
 
-	public setHandler(address : number, length : number, handler : Input) : void {
-		for(let i = 0; i < length; ++i) {
-			this.handlers[address + i] = handler;
-		}
+	public setHandler(address : number, handler : Input) : void {
+		this.handlers[address] = handler;
 	}
 }
 
 class OutputMultiplexor implements Output {
 
-	private handlers = new Array<Output>(256);
+	private handlers = new Array<Array<Output>>(256);
 
 	public constructor() {
-		this.handlers.fill(new NoOutput());
+		for(let i = 0; i < this.handlers.length; ++i) {
+			this.handlers[i] = new Array<Output>();
+		}
 	}
 
 	public writeByte(address: number, data: number) : void {
-		this.handlers[address & 0xFF].writeByte(address, data);
+		let handlersForPort = this.handlers[address & 0xFF];
+		for(let i = 0; i < handlersForPort.length; ++i) {
+			handlersForPort[i].writeByte(address, data);
+		}
 	}
 
-	public setHandler(address : number, length : number, handler : Output) : void {
-		for(let i = 0; i < length; ++i) {
-			this.handlers[address + i] = handler;
-		}
+	public addHandler(address : number, handler : Output) : void {
+		let handlersForPort = this.handlers[address & 0xFF];
+		handlersForPort.push(handler);
 	}
 }
 
@@ -58,16 +54,11 @@ export class IoSystem {
 	private _input = new InputMultiplexor();
 	private _output = new OutputMultiplexor();
 
-	public constructor(keyboard : Keyboard) {
-		this._output.setHandler(0xFE, 1, keyboard);
-		this._input.setHandler(0xFE, 1, keyboard);
-	}
-
-	get output() : Output {
+	get output() : OutputMultiplexor {
 		return this._output;
 	}
 
-	get input() : Input {
+	get input() : InputMultiplexor {
 		return this._input;
 	}
 }

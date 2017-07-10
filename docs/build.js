@@ -98,6 +98,30 @@ define("ExidyOutput", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
 });
+define("ExidyTape", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+});
+define("ExidyArrayTape", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class ArrayTape {
+        constructor(data) {
+            this._index = 0;
+            this._data = data;
+        }
+        readByte(baud) {
+            let d = this._data[this._index++];
+            if (this._index > this._data.length) {
+                this._index = 0;
+            }
+            return d;
+        }
+        writeByte(baud, data) {
+        }
+    }
+    exports.default = ArrayTape;
+});
 define("ExidyKeyboard", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -453,9 +477,7 @@ define("ExidyMemorySystem", ["require", "exports"], function (require, exports) 
             this.handlers[address].writeByte(address, data);
         }
         setHandler(address, length, handler) {
-            for (let i = 0; i < length; ++i) {
-                this.handlers[address + i] = handler;
-            }
+            this.handlers.fill(handler, address, address + length);
         }
     }
     const CHARS_START = 0xF800;
@@ -789,10 +811,6 @@ define("ExidyIo", ["require", "exports"], function (require, exports) {
             return 255;
         }
     }
-    class NoOutput {
-        writeByte(address, data) {
-        }
-    }
     class InputMultiplexor {
         constructor() {
             this.handlers = new Array(256);
@@ -801,32 +819,32 @@ define("ExidyIo", ["require", "exports"], function (require, exports) {
         readByte(address) {
             return this.handlers[address & 0xFF].readByte(address);
         }
-        setHandler(address, length, handler) {
-            for (let i = 0; i < length; ++i) {
-                this.handlers[address + i] = handler;
-            }
+        setHandler(address, handler) {
+            this.handlers[address] = handler;
         }
     }
     class OutputMultiplexor {
         constructor() {
             this.handlers = new Array(256);
-            this.handlers.fill(new NoOutput());
+            for (let i = 0; i < this.handlers.length; ++i) {
+                this.handlers[i] = new Array();
+            }
         }
         writeByte(address, data) {
-            this.handlers[address & 0xFF].writeByte(address, data);
-        }
-        setHandler(address, length, handler) {
-            for (let i = 0; i < length; ++i) {
-                this.handlers[address + i] = handler;
+            let handlersForPort = this.handlers[address & 0xFF];
+            for (let i = 0; i < handlersForPort.length; ++i) {
+                handlersForPort[i].writeByte(address, data);
             }
+        }
+        addHandler(address, handler) {
+            let handlersForPort = this.handlers[address & 0xFF];
+            handlersForPort.push(handler);
         }
     }
     class IoSystem {
-        constructor(keyboard) {
+        constructor() {
             this._input = new InputMultiplexor();
             this._output = new OutputMultiplexor();
-            this._output.setHandler(0xFE, 1, keyboard);
-            this._input.setHandler(0xFE, 1, keyboard);
         }
         get output() {
             return this._output;
@@ -887,7 +905,146 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     }
     exports.ExidyZ80 = ExidyZ80;
 });
-define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMemorySystem", "ExidyIo", "ExidyArrayDisk", "ExidyDiskSystem"], function (require, exports, ExidyZ80_1, DropZone_1, ExidyMemorySystem_1, ExidyIo_1, ExidyArrayDisk_1, ExidyDiskSystem_1) {
+define("ExidyTapeUnitMotorControl", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class TapeUnitMotorControl {
+        constructor(motorMask) {
+            this._motorOn = false;
+            this._baud = 300;
+            this._motorMask = motorMask;
+        }
+        writeByte(data) {
+            let motorOn = (this._motorMask & data) != 0;
+            if (motorOn && !this._motorOn) {
+                console.log('Tape motor on');
+                this._baud = (data & 0x40) == 0 ? 300 : 1200;
+            }
+            else if (!motorOn && this._motorOn) {
+                console.log('Tape motor off');
+            }
+            this._motorOn = motorOn;
+        }
+        get motorOn() {
+            return this._motorOn;
+        }
+        get baud() {
+            return this._baud;
+        }
+    }
+    exports.default = TapeUnitMotorControl;
+});
+define("ExidyTapeUnit", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class TapeUnit {
+        constructor(motorControl) {
+            this._motorControl = motorControl;
+        }
+        get readyForRead() {
+            return this.tape && this._motorControl.motorOn;
+        }
+        get readyForWrite() {
+            return this.tape && this._motorControl.motorOn;
+        }
+        writeByte(data) {
+            if (this.readyForWrite) {
+                this.tape.writeByte(this._motorControl.baud, data);
+            }
+        }
+        readByte() {
+            if (this.readyForRead) {
+                return this.tape.readByte(this._motorControl.baud);
+            }
+            else {
+                return 0;
+            }
+        }
+    }
+    exports.default = TapeUnit;
+});
+define("ExidyTapeSystem", ["require", "exports", "ExidyTapeUnit", "ExidyTapeUnitMotorControl"], function (require, exports, ExidyTapeUnit_1, ExidyTapeUnitMotorControl_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class TapeSystemStatus {
+        constructor(tapeUnits) {
+            this._tapeUnits = tapeUnits;
+        }
+        readByte(address) {
+            let status = 0xfc;
+            for (let i = 0; i < this._tapeUnits.length; ++i) {
+                let tapeUnit = this._tapeUnits[i];
+                if (tapeUnit.readyForRead)
+                    status |= 0x01;
+                if (tapeUnit.readyForWrite)
+                    status |= 0x02;
+            }
+            return status;
+        }
+    }
+    class TapeSystemData {
+        constructor(tapeUnits) {
+            this._tapeUnits = tapeUnits;
+        }
+        writeByte(address, data) {
+            for (let i = 0; i < this._tapeUnits.length; ++i) {
+                let tapeUnit = this._tapeUnits[i];
+                tapeUnit.writeByte(data);
+            }
+        }
+        readByte(address) {
+            for (let i = 0; i < this._tapeUnits.length; ++i) {
+                let tapeUnit = this._tapeUnits[i];
+                if (tapeUnit.readyForRead) {
+                    return tapeUnit.readByte();
+                }
+            }
+            return 0;
+        }
+    }
+    class TapeSystemControl {
+        constructor(tapeControls) {
+            this._tapeControls = tapeControls;
+        }
+        writeByte(address, data) {
+            for (let i = 0; i < this._tapeControls.length; ++i) {
+                let tapeControl = this._tapeControls[i];
+                tapeControl.writeByte(data);
+            }
+        }
+    }
+    class TapeSystem {
+        constructor() {
+            this._tapeControls = [
+                new ExidyTapeUnitMotorControl_1.default(0x10),
+                new ExidyTapeUnitMotorControl_1.default(0x20)
+            ];
+            this._tapeUnits = this._tapeControls.map((tapeControl) => {
+                return new ExidyTapeUnit_1.default(tapeControl);
+            });
+            this._tapeSystemStatus = new TapeSystemStatus(this._tapeUnits);
+            this._tapeSystemControl = new TapeSystemControl(this._tapeControls);
+            this._tapeSystemData = new TapeSystemData(this._tapeUnits);
+        }
+        get status() {
+            return this._tapeSystemStatus;
+        }
+        get dataOutput() {
+            return this._tapeSystemData;
+        }
+        get dataInput() {
+            return this._tapeSystemData;
+        }
+        get control() {
+            return this._tapeSystemControl;
+        }
+        get units() {
+            return this._tapeUnits;
+        }
+    }
+    exports.default = TapeSystem;
+});
+define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMemorySystem", "ExidyIo", "ExidyArrayDisk", "ExidyDiskSystem", "ExidyTapeSystem", "ExidyArrayTape"], function (require, exports, ExidyZ80_1, DropZone_1, ExidyMemorySystem_1, ExidyIo_1, ExidyArrayDisk_1, ExidyDiskSystem_1, ExidyTapeSystem_1, ExidyArrayTape_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const defaultRoms = [
@@ -899,9 +1056,16 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
     const CYCLES_PER_DISK_TICK = 100000;
     class ExidySorcerer {
         constructor(filesystem, keyboard, byteCanvas, charsCanvas, screenCanvas) {
+            this.typeSystem = new ExidyTapeSystem_1.default();
             this.filesystem = filesystem;
             this.memorySystem = new ExidyMemorySystem_1.default(byteCanvas, charsCanvas, screenCanvas);
-            this.io = new ExidyIo_1.IoSystem(keyboard);
+            this.io = new ExidyIo_1.IoSystem();
+            this.io.output.addHandler(0xFE, keyboard);
+            this.io.input.setHandler(0xFE, keyboard);
+            this.io.output.addHandler(0xFE, this.typeSystem.control);
+            this.io.output.addHandler(0xFC, this.typeSystem.dataOutput);
+            this.io.input.setHandler(0xFC, this.typeSystem.dataInput);
+            this.io.input.setHandler(0xFD, this.typeSystem.status);
             this.cpu = new ExidyZ80_1.ExidyZ80(this.memorySystem.memory, this.io.input, this.io.output);
             this.ready = Promise.all(defaultRoms.map((romConfig) => {
                 return filesystem.read('roms/' + romConfig.name).then((data) => {
@@ -946,6 +1110,13 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
                 return this.filesystem.read('disks/' + file).then((data) => {
                     let disk = new ExidyArrayDisk_1.default(data);
                     this.diskSystem.insertDisk(disk, unit);
+                });
+            });
+        }
+        loadTape(unit, file) {
+            this.ready = this.ready.then(() => {
+                return this.filesystem.read('tapes/' + file).then((data) => {
+                    this.typeSystem.units[unit].tape = new ExidyArrayTape_1.default(data);
                 });
             });
         }

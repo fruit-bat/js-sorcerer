@@ -8,6 +8,8 @@ import { IoSystem } from './ExidyIo'
 import Keyboard from './ExidyKeyboard'
 import ExidyArrayDisk from './ExidyArrayDisk'
 import ExidyDiskSystem from './ExidyDiskSystem'
+import TapeSystem from './ExidyTapeSystem'
+import ArrayTape from './ExidyArrayTape'
 
 const defaultRoms = [
 	{ name: "exmo1-1.dat", address: 0xE000 },
@@ -27,6 +29,7 @@ export default class ExidySorcerer {
 	private filesystem : ExidyFile;
 	private diskSystem : ExidyDiskSystem;
 	private cycles : number;
+	private typeSystem = new TapeSystem();
 
 	public constructor(
 		filesystem : ExidyFile,
@@ -37,7 +40,15 @@ export default class ExidySorcerer {
 	) {
 		this.filesystem = filesystem;
 		this.memorySystem = new MemorySystem(byteCanvas, charsCanvas, screenCanvas);
-		this.io = new IoSystem(keyboard);
+
+		this.io = new IoSystem();
+		this.io.output.addHandler(0xFE, keyboard);
+		this.io.input.setHandler(0xFE, keyboard);
+		this.io.output.addHandler(0xFE, this.typeSystem.control);
+		this.io.output.addHandler(0xFC, this.typeSystem.dataOutput);
+		this.io.input.setHandler(0xFC, this.typeSystem.dataInput);
+		this.io.input.setHandler(0xFD, this.typeSystem.status);
+
 		this.cpu = new Z80(this.memorySystem.memory, this.io.input, this.io.output);
 
 		this.ready = Promise.all(defaultRoms.map((romConfig) => {
@@ -89,6 +100,14 @@ export default class ExidySorcerer {
 			return this.filesystem.read('disks/' + file).then((data) => {
 				let disk = new ExidyArrayDisk(data);
 				this.diskSystem.insertDisk(disk, unit);
+			});
+		});
+	}
+
+	public loadTape(unit : number, file : string) : void {
+		this.ready = this.ready.then(() => {
+			return this.filesystem.read('tapes/' + file).then((data) => {
+				this.typeSystem.units[unit].tape = new ArrayTape(data);
 			});
 		});
 	}
