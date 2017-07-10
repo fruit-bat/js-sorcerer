@@ -25,7 +25,7 @@ let exidySorcerer = new ExidySorcerer(
 //exidySorcerer.loadDisk(1, 'disk2.dsk');
 //exidySorcerer.loadDisk(2, 'disk3.dsk');
 //exidySorcerer.loadDisk(3, 'disk4.dsk');
-//exidySorcerer.loadTape(0, 'galx.tape');
+//exidySorcerer.loadTape(0, 'chomp.tape');
 
 screenCanvas.addEventListener('keydown', (key) => {
 	keyboard.browserKeyDown(key.keyCode);

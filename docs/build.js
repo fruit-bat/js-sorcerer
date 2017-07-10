@@ -1173,19 +1173,47 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
             this.cpu.reset(0xE000);
         }
         step() {
+            let c = 0;
             for (let i = 0; i < 3000; ++i) {
-                this.cycles += this.cpu.executeInstruction();
+                let q = this.cpu.executeInstruction();
+                this.cycles += q;
+                c += q;
                 if (this.cycles > CYCLES_PER_DISK_TICK) {
                     this.cycles -= CYCLES_PER_DISK_TICK;
                     this.diskSystem.tick();
                 }
             }
+            return c;
         }
         run() {
+            let t = 0;
+            let g = 100;
+            let c = 0;
+            let d = 10;
+            let interval = setInterval(() => {
+                c += this.step();
+            }, d);
             this.ready.then(() => {
                 setInterval(() => {
-                    this.step();
-                }, 1);
+                    t += g * 2000 - c;
+                    c = 0;
+                    if (t > 100000 & d > 0) {
+                        d -= 1;
+                        t = 0;
+                        clearInterval(interval);
+                        interval = setInterval(() => {
+                            c += this.step();
+                        }, d);
+                    }
+                    else if (t < -100000) {
+                        d += 1;
+                        t = 0;
+                        clearInterval(interval);
+                        interval = setInterval(() => {
+                            c += this.step();
+                        }, d);
+                    }
+                }, g);
             });
         }
     }

@@ -6,13 +6,13 @@ export default class ElementPrinter implements Centronics {
 
 	private _element : HTMLElement;
 
-    private _encodeHTMLmap : any = {
-        "&" : "&amp;",
-        "'" : "&#39;",
-        '"' : "&quot;",
-        "<" : "&lt;",
-        ">" : "&gt;"
-    };
+	private _encodeHTMLmap : any = {
+		"&" : "&amp;",
+		"'" : "&#39;",
+		'"' : "&quot;",
+		"<" : "&lt;",
+		">" : "&gt;"
+	};
 
 	constructor(element : HTMLElement) {
 		this._element = element;
