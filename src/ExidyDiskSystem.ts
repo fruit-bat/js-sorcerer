@@ -158,14 +158,7 @@ export default class ExidyDiskSystem implements Memory
 
 	private readReg2() : number
 	{
-		if( this._activeDrive != null )
-		{
-			return this._activeDrive.readReg2();
-		}
-		else
-		{
-			return 0;
-		}
+		return this._activeDrive == null ? 0 : this._activeDrive.readReg2();
 	}
 
 	public writeByte(address : number, b : number) : void
@@ -180,14 +173,13 @@ export default class ExidyDiskSystem implements Memory
 
 	public readByte(address :number) : number
 	{
-		let r = 0;
 		switch(address - MEM_DISK_REG_START)
 		{
-			case 0: r = this.readReg0(); break;
-			case 1: r = this.readReg1(); break;
-			case 2: r = this.readReg2(); break;
+			case 0: return this.readReg0();
+			case 1: return this.readReg1();
+			case 2: return this.readReg2();
 		}
-		return r;
+		return 0;
 	}
 
 	public tick() : void
