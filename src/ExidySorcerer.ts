@@ -152,7 +152,7 @@ export default class ExidySorcerer {
 			setInterval(() => {
 				t += g * 2000 - c;
 				c = 0;
-				if(t > 100000 & d > 0) {
+				if(t > 100000 && d > 0) {
 					d -= 1;
 					t = 0;
 					clearInterval(interval);

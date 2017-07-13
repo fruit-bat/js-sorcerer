@@ -25,7 +25,7 @@ gulp.task("build", ['copy', 'tsify']);
 gulp.task("default", ["build"]);
 
 gulp.task('watch', function () {
-   gulp.watch(['src/**/*', 'assets/**/*'], ['build']);
+   gulp.watch(['src/**/*', 'assets/**/*', 'tsconfig.tson', 'gulpfile.js'], ['build']);
 });
 
 var reload = browserSync.reload;

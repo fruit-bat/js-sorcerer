@@ -596,15 +596,10 @@ define("ExidyMemorySystem", ["require", "exports"], function (require, exports) 
             this.multplexor.setHandler(CHARS_START, CHARS_SIZE_BYTES, this.exidyCharacters);
         }
         load(data, address, start = 0) {
-            let len = data.length - start;
-            for (let i = 0; i < len; ++i) {
-                this._memory[address + i] = data[i + start];
-            }
+            this._memory.set(data.subarray(start), address);
         }
         loadRom(data, address) {
-            for (let i = 0; i < data.length; ++i) {
-                this._memory[address + i] = data[i];
-            }
+            this._memory.set(data, address);
             this.multplexor.setHandler(address, data.length, this.rom);
         }
         get memory() {
@@ -644,20 +639,10 @@ define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive"], function (re
             this._drives[drive].disk = disk;
         }
         dataReady() {
-            if (this._activeDrive != null) {
-                return this._activeDrive.dataReady();
-            }
-            else {
-                return false;
-            }
+            return this._activeDrive == null ? false : this._activeDrive.dataReady();
         }
         home() {
-            if (this._activeDrive != null) {
-                return this._activeDrive.home();
-            }
-            else {
-                return false;
-            }
+            return this._activeDrive != null ? this._activeDrive.home() : false;
         }
         stepForward() {
             if (this._activeDrive != null) {
@@ -740,12 +725,7 @@ define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive"], function (re
             }
         }
         readReg0() {
-            if (this._activeDrive != null) {
-                return this._activeDrive.readReg0();
-            }
-            else {
-                return 0;
-            }
+            return this._activeDrive != null ? this._activeDrive.readReg0() : 0;
         }
         readReg1() {
             let r = this._activeDriveNumber;
@@ -995,12 +975,7 @@ define("ExidyTapeUnit", ["require", "exports"], function (require, exports) {
             }
         }
         readByte() {
-            if (this.readyForRead) {
-                return this.tape.readByte(this._motorControl.baud);
-            }
-            else {
-                return 0;
-            }
+            return this.readyForRead ? this.tape.readByte(this._motorControl.baud) : 0;
         }
     }
     exports.default = TapeUnit;
@@ -1197,7 +1172,7 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
                 setInterval(() => {
                     t += g * 2000 - c;
                     c = 0;
-                    if (t > 100000 & d > 0) {
+                    if (t > 100000 && d > 0) {
                         d -= 1;
                         t = 0;
                         clearInterval(interval);

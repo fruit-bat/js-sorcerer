@@ -28,11 +28,6 @@ export default class TapeUnit {
 	}
 
 	readByte(): number {
-		if(this.readyForRead) {
-			return this.tape.readByte(this._motorControl.baud);
-		}
-		else {
-			return 0;
-		}
+		return this.readyForRead ? this.tape.readByte(this._motorControl.baud) : 0;
 	}
 }

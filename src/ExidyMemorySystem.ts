@@ -217,16 +217,11 @@ export default class MemorySystem {
 	}
 
 	public load(data : Uint8Array, address : number, start : number = 0) : void {
-		let len = data.length - start;
-		for(let i = 0; i < len; ++i) {
-			this._memory[address + i] = data[i + start];
-		}
+		this._memory.set(data.subarray(start), address);
 	}
 
 	public loadRom(data : Uint8Array, address : number) : void {
-		for(let i = 0; i < data.length; ++i) {
-			this._memory[address + i] = data[i];
-		}
+		this._memory.set(data, address);
 		this.multplexor.setHandler(address, data.length, this.rom);
 	}
 

@@ -37,26 +37,12 @@ export default class ExidyDiskSystem implements Memory
 
 	private dataReady() : boolean
 	{
-		if( this._activeDrive != null )
-		{
-			return this._activeDrive.dataReady();
-		}
-		else
-		{
-			return false;
-		}
+		return this._activeDrive == null ? false : this._activeDrive.dataReady();
 	}
 
 	private home() : boolean
 	{
-		if( this._activeDrive != null )
-		{
-			return this._activeDrive.home();
-		}
-		else
-		{
-			return false;
-		}
+		return this._activeDrive != null ? this._activeDrive.home() : false;
 	}
 
 	private stepForward() : void
@@ -135,14 +121,7 @@ export default class ExidyDiskSystem implements Memory
 
 	private readReg0() : number
 	{
-		if( this._activeDrive != null )
-		{
-			return this._activeDrive.readReg0();
-		}
-		else
-		{
-			return 0;
-		}
+		return this._activeDrive != null ? this._activeDrive.readReg0() : 0;
 	}
 
 	private readReg1() : number
