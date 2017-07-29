@@ -29,16 +29,16 @@ export default class ExidyScreen extends Ram {
 	}
 
 	private updateByte(address: number, data: number) : void {
-		let index = address - SCREEN_START;
-		let row = index >> 6;
-		let col = index - (row << 6);
-		let char = this.readByte(address);
+		const index = address - SCREEN_START;
+		const row = index >> 6;
+		const col = index - (row << 6);
+		const char = this.readByte(address);
 		this.screenCtx.drawImage(this.charsCanvas, char << 3, 0, 8, 8, col << 3, row << 3, 8, 8);
 	}
 
 	public charUpdated(updatedChar: number) : void {
 		for(let address = SCREEN_START; address < SCREEN_START + SCREEN_SIZE_BYTES; ++address) {
-			let char = this.readByte(address);
+			const char = this.readByte(address);
 			if(updatedChar === char) {
 				this.updateByte(address, char);
 			}
@@ -47,7 +47,7 @@ export default class ExidyScreen extends Ram {
 
 	public updateAll() : void {
 		for(let address = SCREEN_START ; address < SCREEN_START + SCREEN_SIZE_BYTES ; ++address) {
-			let char = this.readByte(address);
+			const char = this.readByte(address);
 			this.updateByte(address, char);
 		}
 	}

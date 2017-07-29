@@ -37,14 +37,14 @@ class OutputMultiplexor implements Output {
 	}
 
 	public writeByte(address: number, data: number) : void {
-		let handlersForPort = this.handlers[address & 0xFF];
+		const handlersForPort = this.handlers[address & 0xFF];
 		for(let i = 0; i < handlersForPort.length; ++i) {
 			handlersForPort[i].writeByte(address, data);
 		}
 	}
 
 	public addHandler(address : number, handler : Output) : void {
-		let handlersForPort = this.handlers[address & 0xFF];
+		const handlersForPort = this.handlers[address & 0xFF];
 		handlersForPort.push(handler);
 	}
 }

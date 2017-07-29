@@ -43,16 +43,16 @@ export default class ExidyCharacters extends Ram {
 	}
 
 	private updateByte(address: number, data: number) : number {
-		let offset = address - CHARS_START;
-		let row = offset & 0x7;
-		let char = offset >> 3;
+		const offset = address - CHARS_START;
+		const row = offset & 0x7;
+		const char = offset >> 3;
 		this.charsCtx.drawImage(this.byteCanvas, 0, data, 8, 1, char << 3, row, 8, 1);
 		return char;
 	}
 
 	public updateAll() : void {
 		for(let i = 0; i < (256 << 3); ++i) {
-			let data = this.readByte(CHARS_START + i);
+			const data = this.readByte(CHARS_START + i);
 			this.updateByte(CHARS_START + i, data);
 		}
 	}

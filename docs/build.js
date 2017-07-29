@@ -350,15 +350,15 @@ define("ExidyCharacters", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"
             }
         }
         updateByte(address, data) {
-            let offset = address - ExidyMemory_1.CHARS_START;
-            let row = offset & 0x7;
-            let char = offset >> 3;
+            const offset = address - ExidyMemory_1.CHARS_START;
+            const row = offset & 0x7;
+            const char = offset >> 3;
             this.charsCtx.drawImage(this.byteCanvas, 0, data, 8, 1, char << 3, row, 8, 1);
             return char;
         }
         updateAll() {
             for (let i = 0; i < (256 << 3); ++i) {
-                let data = this.readByte(ExidyMemory_1.CHARS_START + i);
+                const data = this.readByte(ExidyMemory_1.CHARS_START + i);
                 this.updateByte(ExidyMemory_1.CHARS_START + i, data);
             }
         }
@@ -558,15 +558,15 @@ define("ExidyScreen", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"], f
             }
         }
         updateByte(address, data) {
-            let index = address - ExidyMemory_2.SCREEN_START;
-            let row = index >> 6;
-            let col = index - (row << 6);
-            let char = this.readByte(address);
+            const index = address - ExidyMemory_2.SCREEN_START;
+            const row = index >> 6;
+            const col = index - (row << 6);
+            const char = this.readByte(address);
             this.screenCtx.drawImage(this.charsCanvas, char << 3, 0, 8, 8, col << 3, row << 3, 8, 8);
         }
         charUpdated(updatedChar) {
             for (let address = ExidyMemory_2.SCREEN_START; address < ExidyMemory_2.SCREEN_START + ExidyMemory_2.SCREEN_SIZE_BYTES; ++address) {
-                let char = this.readByte(address);
+                const char = this.readByte(address);
                 if (updatedChar === char) {
                     this.updateByte(address, char);
                 }
@@ -574,7 +574,7 @@ define("ExidyScreen", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"], f
         }
         updateAll() {
             for (let address = ExidyMemory_2.SCREEN_START; address < ExidyMemory_2.SCREEN_START + ExidyMemory_2.SCREEN_SIZE_BYTES; ++address) {
-                let char = this.readByte(address);
+                const char = this.readByte(address);
                 this.updateByte(address, char);
             }
         }
@@ -875,13 +875,13 @@ define("ExidyIo", ["require", "exports"], function (require, exports) {
             }
         }
         writeByte(address, data) {
-            let handlersForPort = this.handlers[address & 0xFF];
+            const handlersForPort = this.handlers[address & 0xFF];
             for (let i = 0; i < handlersForPort.length; ++i) {
                 handlersForPort[i].writeByte(address, data);
             }
         }
         addHandler(address, handler) {
-            let handlersForPort = this.handlers[address & 0xFF];
+            const handlersForPort = this.handlers[address & 0xFF];
             handlersForPort.push(handler);
         }
     }
