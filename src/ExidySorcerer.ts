@@ -37,12 +37,10 @@ export default class ExidySorcerer {
 	public constructor(
 		filesystem : ExidyFile,
 		keyboard : Keyboard,
-		byteCanvas : HTMLCanvasElement,
-		charsCanvas : HTMLCanvasElement,
 		screenCanvas : HTMLCanvasElement
 	) {
 		this.filesystem = filesystem;
-		this.memorySystem = new MemorySystem(byteCanvas, charsCanvas, screenCanvas);
+		this.memorySystem = new MemorySystem(screenCanvas);
 
 		this.io = new IoSystem();
 		this.io.output.addHandler(0xFE, keyboard);

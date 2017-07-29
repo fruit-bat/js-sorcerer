@@ -13,15 +13,16 @@ export default class ExidyCharacters extends Ram {
 
 	public constructor(
 		memory : Uint8Array,
-		byteCanvas : HTMLCanvasElement,
 		charsCanvas : HTMLCanvasElement,
 		charUpdated : (char: number) => void)
 	{
 		super(memory);
 		this.charsCanvas = charsCanvas;
-		this.byteCanvas = byteCanvas;
-		this.byteCtx = byteCanvas.getContext("2d");
-		this.charsCtx = charsCanvas.getContext("2d");
+		this.byteCanvas = <HTMLCanvasElement>document.createElement('canvas');
+    this.byteCanvas.width = 8;
+    this.byteCanvas.height = 256;
+		this.byteCtx = this.byteCanvas.getContext("2d");
+		this.charsCtx = this.charsCanvas.getContext("2d");
 		this.charUpdated = charUpdated;
 
 		for(let i = 0; i < 256; ++i) {

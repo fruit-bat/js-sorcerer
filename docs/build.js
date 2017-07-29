@@ -325,12 +325,14 @@ define("ExidyCharacters", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class ExidyCharacters extends ExidyMemoryRam_1.default {
-        constructor(memory, byteCanvas, charsCanvas, charUpdated) {
+        constructor(memory, charsCanvas, charUpdated) {
             super(memory);
             this.charsCanvas = charsCanvas;
-            this.byteCanvas = byteCanvas;
-            this.byteCtx = byteCanvas.getContext("2d");
-            this.charsCtx = charsCanvas.getContext("2d");
+            this.byteCanvas = document.createElement('canvas');
+            this.byteCanvas.width = 8;
+            this.byteCanvas.height = 256;
+            this.byteCtx = this.byteCanvas.getContext("2d");
+            this.charsCtx = this.charsCanvas.getContext("2d");
             this.charUpdated = charUpdated;
             for (let i = 0; i < 256; ++i) {
                 let j = i;
@@ -598,15 +600,18 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryNone", "ExidyMemo
         }
     }
     class MemorySystem {
-        constructor(byteCanvas, charsCanvas, screenCanvas) {
+        constructor(screenCanvas) {
             this._memory = new Uint8Array(ExidyMemory_3.MEMORY_SIZE_IN_BYTES);
             this.ram = new ExidyMemoryRam_3.default(this._memory);
             this.rom = new ExidyMemoryRom_1.default(this._memory);
             this.multplexor = new Multiplexor();
             this.multplexor.setHandler(0, ExidyMemory_3.MEMORY_SIZE_IN_BYTES, this.ram);
             this.multplexor.setHandler(0xF800, 0xFE00 - 0xF800, this.rom);
+            const charsCanvas = document.createElement('canvas');
+            charsCanvas.width = 2048;
+            charsCanvas.height = 8;
             this.exidyScreen = new ExidyScreen_1.default(this._memory, charsCanvas, screenCanvas);
-            this.exidyCharacters = new ExidyCharacters_1.default(this._memory, byteCanvas, charsCanvas, (char) => {
+            this.exidyCharacters = new ExidyCharacters_1.default(this._memory, charsCanvas, (char) => {
                 this.exidyScreen.charUpdated(char);
             });
             this.multplexor.setHandler(ExidyMemory_3.SCREEN_START, ExidyMemory_3.SCREEN_SIZE_BYTES, this.exidyScreen);
@@ -1089,11 +1094,11 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
     ];
     const CYCLES_PER_DISK_TICK = 100000;
     class ExidySorcerer {
-        constructor(filesystem, keyboard, byteCanvas, charsCanvas, screenCanvas) {
+        constructor(filesystem, keyboard, screenCanvas) {
             this.typeSystem = new ExidyTapeSystem_1.default();
             this.centronicsSystem = new ExidyCentronicsSystem_1.default();
             this.filesystem = filesystem;
-            this.memorySystem = new ExidyMemorySystem_1.default(byteCanvas, charsCanvas, screenCanvas);
+            this.memorySystem = new ExidyMemorySystem_1.default(screenCanvas);
             this.io = new ExidyIo_1.IoSystem();
             this.io.output.addHandler(0xFE, keyboard);
             this.io.input.setHandler(0xFE, keyboard);
@@ -1218,7 +1223,7 @@ define("main", ["require", "exports", "ExidySorcerer", "ExidyFileBinaryAjax", "E
     let printerPaper = document.getElementById('exidyPaper');
     let exidyFile = new ExidyFileBinaryAjax_1.default();
     let keyboard = new ExidyBrowserKeyboard_1.default();
-    let exidySorcerer = new ExidySorcerer_1.default(exidyFile, keyboard, document.getElementById('exidyBytes'), document.getElementById('exidyCharacters'), screenCanvas);
+    let exidySorcerer = new ExidySorcerer_1.default(exidyFile, keyboard, screenCanvas);
     screenCanvas.addEventListener('keydown', (key) => {
         keyboard.browserKeyDown(key.keyCode);
         key.stopPropagation();
