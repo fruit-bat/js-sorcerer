@@ -292,6 +292,77 @@ define("ExidyCentronicsSystem", ["require", "exports"], function (require, expor
     }
     exports.default = CentronicsSystem;
 });
+define("ExidyMemory", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.MEMORY_SIZE_IN_BYTES = 65536;
+    exports.CHARS_START = 0xF800;
+    exports.SCREEN_START = 0xF080;
+    exports.SCREEN_WIDTH = 64;
+    exports.SCREEN_HEIGHT = 30;
+    exports.SCREEN_SIZE_BYTES = exports.SCREEN_WIDTH * exports.SCREEN_HEIGHT;
+    exports.CHARS_SIZE_BYTES = 8 * 256;
+});
+define("ExidyMemoryRam", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class Ram {
+        constructor(memory) {
+            this.memory = memory;
+        }
+        readByte(address) {
+            return this.memory[address];
+        }
+        ;
+        writeByte(address, data) {
+            this.memory[address] = data;
+        }
+        ;
+    }
+    exports.default = Ram;
+});
+define("ExidyCharacters", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"], function (require, exports, ExidyMemoryRam_1, ExidyMemory_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class ExidyCharacters extends ExidyMemoryRam_1.default {
+        constructor(memory, byteCanvas, charsCanvas, charUpdated) {
+            super(memory);
+            this.charsCanvas = charsCanvas;
+            this.byteCanvas = byteCanvas;
+            this.byteCtx = byteCanvas.getContext("2d");
+            this.charsCtx = charsCanvas.getContext("2d");
+            this.charUpdated = charUpdated;
+            for (let i = 0; i < 256; ++i) {
+                let j = i;
+                for (let x = 0; x < 8; ++x) {
+                    this.byteCtx.fillStyle = ((j & 0x80) === 0x80) ? "white" : "black";
+                    this.byteCtx.fillRect(x, i, 1, 1);
+                    j <<= 1;
+                }
+            }
+        }
+        writeByte(address, data) {
+            if (address >= 0xFC00 && (data !== this.readByte(address))) {
+                super.writeByte(address, data);
+                this.charUpdated(this.updateByte(address, data));
+            }
+        }
+        updateByte(address, data) {
+            let offset = address - ExidyMemory_1.CHARS_START;
+            let row = offset & 0x7;
+            let char = offset >> 3;
+            this.charsCtx.drawImage(this.byteCanvas, 0, data, 8, 1, char << 3, row, 8, 1);
+            return char;
+        }
+        updateAll() {
+            for (let i = 0; i < (256 << 3); ++i) {
+                let data = this.readByte(ExidyMemory_1.CHARS_START + i);
+                this.updateByte(ExidyMemory_1.CHARS_START + i, data);
+            }
+        }
+    }
+    exports.default = ExidyCharacters;
+});
 define("ExidyDiskDrive", ["require", "exports", "ExidyDisk"], function (require, exports, ExidyDisk_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -437,27 +508,23 @@ define("ExidyDiskDrive", ["require", "exports", "ExidyDisk"], function (require,
     }
     exports.default = ExidyDiskDrive;
 });
-define("ExidyMemory", ["require", "exports"], function (require, exports) {
+define("ExidyMemoryNone", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-});
-define("ExidyMemorySystem", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    class Ram {
-        constructor(memory) {
-            this.memory = memory;
+    class NoMemory {
+        constructor() {
         }
         readByte(address) {
-            return this.memory[address];
+            return 0;
         }
-        ;
         writeByte(address, data) {
-            this.memory[address] = data;
         }
-        ;
     }
-    exports.Ram = Ram;
+    exports.default = NoMemory;
+});
+define("ExidyMemoryRom", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
     class Rom {
         constructor(memory) {
             this.memory = memory;
@@ -470,78 +537,12 @@ define("ExidyMemorySystem", ["require", "exports"], function (require, exports) 
         }
         ;
     }
-    exports.Rom = Rom;
-    class NoMemory {
-        constructor() {
-        }
-        readByte(address) {
-            return 0;
-        }
-        writeByte(address, data) {
-        }
-    }
-    exports.NoMemory = NoMemory;
-    const MEMORY_SIZE_IN_BYTES = 65536;
-    class Multiplexor {
-        constructor() {
-            this.handlers = new Array(MEMORY_SIZE_IN_BYTES);
-            this.handlers.fill(new NoMemory());
-        }
-        readByte(address) {
-            return this.handlers[address].readByte(address);
-        }
-        writeByte(address, data) {
-            this.handlers[address].writeByte(address, data);
-        }
-        setHandler(address, length, handler) {
-            this.handlers.fill(handler, address, address + length);
-        }
-    }
-    const CHARS_START = 0xF800;
-    const CHARS_SIZE_BYTES = 8 * 256;
-    class ExidyCharacters extends Ram {
-        constructor(memory, byteCanvas, charsCanvas, charUpdated) {
-            super(memory);
-            this.charsCanvas = charsCanvas;
-            this.byteCanvas = byteCanvas;
-            this.byteCtx = byteCanvas.getContext("2d");
-            this.charsCtx = charsCanvas.getContext("2d");
-            this.charUpdated = charUpdated;
-            for (let i = 0; i < 256; ++i) {
-                let j = i;
-                for (let x = 0; x < 8; ++x) {
-                    this.byteCtx.fillStyle = ((j & 0x80) === 0x80) ? "white" : "black";
-                    this.byteCtx.fillRect(x, i, 1, 1);
-                    j <<= 1;
-                }
-            }
-        }
-        writeByte(address, data) {
-            if (address >= 0xFC00 && (data !== this.readByte(address))) {
-                super.writeByte(address, data);
-                this.charUpdated(this.updateByte(address, data));
-            }
-        }
-        updateByte(address, data) {
-            let offset = address - CHARS_START;
-            let row = offset & 0x7;
-            let char = offset >> 3;
-            this.charsCtx.drawImage(this.byteCanvas, 0, data, 8, 1, char << 3, row, 8, 1);
-            return char;
-        }
-        updateAll() {
-            for (let i = 0; i < (256 << 3); ++i) {
-                let data = this.readByte(CHARS_START + i);
-                this.updateByte(CHARS_START + i, data);
-            }
-        }
-    }
-    const SCREEN_START = 0xF080;
-    const SCREEN_WIDTH = 64;
-    const SCREEN_HEIGHT = 30;
-    const SCREEN_SIZE_CHARS = SCREEN_WIDTH * SCREEN_HEIGHT;
-    const SCREEN_SIZE_BYTES = SCREEN_SIZE_CHARS;
-    class ExidyScreen extends Ram {
+    exports.default = Rom;
+});
+define("ExidyScreen", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"], function (require, exports, ExidyMemoryRam_2, ExidyMemory_2) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class ExidyScreen extends ExidyMemoryRam_2.default {
         constructor(memory, charsCanvas, screenCanvas) {
             super(memory);
             this.screenCanvas = screenCanvas;
@@ -555,14 +556,14 @@ define("ExidyMemorySystem", ["require", "exports"], function (require, exports) 
             }
         }
         updateByte(address, data) {
-            let index = address - SCREEN_START;
+            let index = address - ExidyMemory_2.SCREEN_START;
             let row = index >> 6;
             let col = index - (row << 6);
             let char = this.readByte(address);
             this.screenCtx.drawImage(this.charsCanvas, char << 3, 0, 8, 8, col << 3, row << 3, 8, 8);
         }
         charUpdated(updatedChar) {
-            for (let address = SCREEN_START; address < SCREEN_START + SCREEN_SIZE_BYTES; ++address) {
+            for (let address = ExidyMemory_2.SCREEN_START; address < ExidyMemory_2.SCREEN_START + ExidyMemory_2.SCREEN_SIZE_BYTES; ++address) {
                 let char = this.readByte(address);
                 if (updatedChar === char) {
                     this.updateByte(address, char);
@@ -570,26 +571,46 @@ define("ExidyMemorySystem", ["require", "exports"], function (require, exports) 
             }
         }
         updateAll() {
-            for (let address = SCREEN_START; address < SCREEN_START + SCREEN_SIZE_BYTES; ++address) {
+            for (let address = ExidyMemory_2.SCREEN_START; address < ExidyMemory_2.SCREEN_START + ExidyMemory_2.SCREEN_SIZE_BYTES; ++address) {
                 let char = this.readByte(address);
                 this.updateByte(address, char);
             }
         }
     }
+    exports.default = ExidyScreen;
+});
+define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryNone", "ExidyMemory", "ExidyMemoryRam", "ExidyMemoryRom", "ExidyCharacters", "ExidyScreen"], function (require, exports, ExidyMemoryNone_1, ExidyMemory_3, ExidyMemoryRam_3, ExidyMemoryRom_1, ExidyCharacters_1, ExidyScreen_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class Multiplexor {
+        constructor() {
+            this.handlers = new Array(ExidyMemory_3.MEMORY_SIZE_IN_BYTES);
+            this.handlers.fill(new ExidyMemoryNone_1.default());
+        }
+        readByte(address) {
+            return this.handlers[address].readByte(address);
+        }
+        writeByte(address, data) {
+            this.handlers[address].writeByte(address, data);
+        }
+        setHandler(address, length, handler) {
+            this.handlers.fill(handler, address, address + length);
+        }
+    }
     class MemorySystem {
         constructor(byteCanvas, charsCanvas, screenCanvas) {
-            this._memory = new Uint8Array(MEMORY_SIZE_IN_BYTES);
-            this.ram = new Ram(this._memory);
-            this.rom = new Rom(this._memory);
+            this._memory = new Uint8Array(ExidyMemory_3.MEMORY_SIZE_IN_BYTES);
+            this.ram = new ExidyMemoryRam_3.default(this._memory);
+            this.rom = new ExidyMemoryRom_1.default(this._memory);
             this.multplexor = new Multiplexor();
-            this.multplexor.setHandler(0, MEMORY_SIZE_IN_BYTES, this.ram);
+            this.multplexor.setHandler(0, ExidyMemory_3.MEMORY_SIZE_IN_BYTES, this.ram);
             this.multplexor.setHandler(0xF800, 0xFE00 - 0xF800, this.rom);
-            this.exidyScreen = new ExidyScreen(this._memory, charsCanvas, screenCanvas);
-            this.exidyCharacters = new ExidyCharacters(this._memory, byteCanvas, charsCanvas, (char) => {
+            this.exidyScreen = new ExidyScreen_1.default(this._memory, charsCanvas, screenCanvas);
+            this.exidyCharacters = new ExidyCharacters_1.default(this._memory, byteCanvas, charsCanvas, (char) => {
                 this.exidyScreen.charUpdated(char);
             });
-            this.multplexor.setHandler(SCREEN_START, SCREEN_SIZE_BYTES, this.exidyScreen);
-            this.multplexor.setHandler(CHARS_START, CHARS_SIZE_BYTES, this.exidyCharacters);
+            this.multplexor.setHandler(ExidyMemory_3.SCREEN_START, ExidyMemory_3.SCREEN_SIZE_BYTES, this.exidyScreen);
+            this.multplexor.setHandler(ExidyMemory_3.CHARS_START, ExidyMemory_3.CHARS_SIZE_BYTES, this.exidyCharacters);
         }
         load(data, address, start = 0) {
             this._memory.set(data.subarray(start), address);
