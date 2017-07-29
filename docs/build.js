@@ -545,11 +545,16 @@ define("ExidyScreen", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"], f
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class ExidyScreen extends ExidyMemoryRam_2.default {
-        constructor(memory, charsCanvas, screenCanvas) {
+        constructor(memory, charsCanvas) {
             super(memory);
-            this.screenCanvas = screenCanvas;
+            this.screenCanvas = document.createElement('canvas');
+            this.screenCanvas.width = 512;
+            this.screenCanvas.height = 240;
             this.charsCanvas = charsCanvas;
-            this.screenCtx = screenCanvas.getContext("2d");
+            this.screenCtx = this.screenCanvas.getContext("2d");
+        }
+        get canvas() {
+            return this.screenCanvas;
         }
         writeByte(address, data) {
             if (data !== this.readByte(address)) {
@@ -600,7 +605,7 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryNone", "ExidyMemo
         }
     }
     class MemorySystem {
-        constructor(screenCanvas) {
+        constructor() {
             this._memory = new Uint8Array(ExidyMemory_3.MEMORY_SIZE_IN_BYTES);
             this.ram = new ExidyMemoryRam_3.default(this._memory);
             this.rom = new ExidyMemoryRom_1.default(this._memory);
@@ -610,12 +615,15 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryNone", "ExidyMemo
             const charsCanvas = document.createElement('canvas');
             charsCanvas.width = 2048;
             charsCanvas.height = 8;
-            this.exidyScreen = new ExidyScreen_1.default(this._memory, charsCanvas, screenCanvas);
+            this.exidyScreen = new ExidyScreen_1.default(this._memory, charsCanvas);
             this.exidyCharacters = new ExidyCharacters_1.default(this._memory, charsCanvas, (char) => {
                 this.exidyScreen.charUpdated(char);
             });
             this.multplexor.setHandler(ExidyMemory_3.SCREEN_START, ExidyMemory_3.SCREEN_SIZE_BYTES, this.exidyScreen);
             this.multplexor.setHandler(ExidyMemory_3.CHARS_START, ExidyMemory_3.CHARS_SIZE_BYTES, this.exidyCharacters);
+        }
+        get screenCanvas() {
+            return this.exidyScreen.canvas;
         }
         load(data, address, start = 0) {
             this._memory.set(data.subarray(start), address);
@@ -1094,11 +1102,11 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
     ];
     const CYCLES_PER_DISK_TICK = 100000;
     class ExidySorcerer {
-        constructor(filesystem, keyboard, screenCanvas) {
+        constructor(filesystem, keyboard) {
             this.typeSystem = new ExidyTapeSystem_1.default();
             this.centronicsSystem = new ExidyCentronicsSystem_1.default();
             this.filesystem = filesystem;
-            this.memorySystem = new ExidyMemorySystem_1.default(screenCanvas);
+            this.memorySystem = new ExidyMemorySystem_1.default();
             this.io = new ExidyIo_1.IoSystem();
             this.io.output.addHandler(0xFE, keyboard);
             this.io.input.setHandler(0xFE, keyboard);
@@ -1120,9 +1128,12 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
                 this.memorySystem.updateScreen();
                 this.reset();
             });
-            new DropZone_1.default(screenCanvas, (buffer) => {
+            new DropZone_1.default(this.memorySystem.screenCanvas, (buffer) => {
                 this.loadSnpFromArray(new Uint8Array(buffer));
             });
+        }
+        get screenCanvas() {
+            return this.memorySystem.screenCanvas;
         }
         loadRomFromArray(data) {
             this.memorySystem.loadRom(data, 0xC000);
@@ -1219,21 +1230,22 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
 define("main", ["require", "exports", "ExidySorcerer", "ExidyFileBinaryAjax", "ExidyBrowserKeyboard", "ExidyElementPrinter"], function (require, exports, ExidySorcerer_1, ExidyFileBinaryAjax_1, ExidyBrowserKeyboard_1, ExidyElementPrinter_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    let screenCanvas = document.getElementById('exidyScreen');
-    let printerPaper = document.getElementById('exidyPaper');
-    let exidyFile = new ExidyFileBinaryAjax_1.default();
-    let keyboard = new ExidyBrowserKeyboard_1.default();
-    let exidySorcerer = new ExidySorcerer_1.default(exidyFile, keyboard, screenCanvas);
-    screenCanvas.addEventListener('keydown', (key) => {
+    const screenContainer = document.getElementById('exidy-screen-container');
+    const printerPaper = document.getElementById('exidyPaper');
+    const exidyFile = new ExidyFileBinaryAjax_1.default();
+    const keyboard = new ExidyBrowserKeyboard_1.default();
+    const exidySorcerer = new ExidySorcerer_1.default(exidyFile, keyboard);
+    screenContainer.appendChild(exidySorcerer.screenCanvas);
+    screenContainer.addEventListener('keydown', (key) => {
         keyboard.browserKeyDown(key.keyCode);
         key.stopPropagation();
         key.preventDefault();
     });
-    screenCanvas.addEventListener('keyup', (key) => {
+    screenContainer.addEventListener('keyup', (key) => {
         keyboard.browserKeyUp(key.keyCode);
         key.stopPropagation();
         key.preventDefault();
     });
-    let printer = new ExidyElementPrinter_1.default(printerPaper);
+    const printer = new ExidyElementPrinter_1.default(printerPaper);
     exidySorcerer.run();
 });

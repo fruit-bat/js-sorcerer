@@ -1,17 +1,17 @@
 "use strict"
 
-import { ExidyZ80 as Z80 } from './ExidyZ80'
-import ExidyFile from './ExidyFile'
-import DropZone from './DropZone'
-import MemorySystem from './ExidyMemorySystem'
-import { IoSystem } from './ExidyIo'
-import Keyboard from './ExidyKeyboard'
-import ExidyArrayDisk from './ExidyArrayDisk'
-import ExidyDiskSystem from './ExidyDiskSystem'
-import TapeSystem from './ExidyTapeSystem'
-import ArrayTape from './ExidyArrayTape'
-import Centronics from './ExidyCentronics'
-import CentronicsSystem from './ExidyCentronicsSystem'
+import { ExidyZ80 as Z80 } from './ExidyZ80';
+import ExidyFile from './ExidyFile';
+import DropZone from './DropZone';
+import MemorySystem from './ExidyMemorySystem';
+import { IoSystem } from './ExidyIo';
+import Keyboard from './ExidyKeyboard';
+import ExidyArrayDisk from './ExidyArrayDisk';
+import ExidyDiskSystem from './ExidyDiskSystem';
+import TapeSystem from './ExidyTapeSystem';
+import ArrayTape from './ExidyArrayTape';
+import Centronics from './ExidyCentronics';
+import CentronicsSystem from './ExidyCentronicsSystem';
 
 const defaultRoms = [
 	{ name: "exmo1-1.dat", address: 0xE000 },
@@ -36,11 +36,9 @@ export default class ExidySorcerer {
 
 	public constructor(
 		filesystem : ExidyFile,
-		keyboard : Keyboard,
-		screenCanvas : HTMLCanvasElement
-	) {
+		keyboard : Keyboard) {
 		this.filesystem = filesystem;
-		this.memorySystem = new MemorySystem(screenCanvas);
+		this.memorySystem = new MemorySystem();
 
 		this.io = new IoSystem();
 		this.io.output.addHandler(0xFE, keyboard);
@@ -66,9 +64,13 @@ export default class ExidySorcerer {
 			this.reset();
 		});
 
-		new DropZone(screenCanvas, (buffer) => {
+		new DropZone(this.memorySystem.screenCanvas, (buffer) => {
 			this.loadSnpFromArray(new Uint8Array(buffer));
 		});
+	}
+
+	public get screenCanvas() : HTMLCanvasElement {
+		return this.memorySystem.screenCanvas;
 	}
 
 	private loadRomFromArray(data : Uint8Array) : void {

@@ -4,16 +4,17 @@ import ExidyFileBinaryAjax from './ExidyFileBinaryAjax'
 import BrowserKeyboard from './ExidyBrowserKeyboard';
 import ElementPrinter from './ExidyElementPrinter';
 
-let screenCanvas = <HTMLCanvasElement>document.getElementById('exidyScreen');
-let printerPaper = <HTMLElement>document.getElementById('exidyPaper');
+const screenContainer = <HTMLDivElement>document.getElementById('exidy-screen-container');
+const printerPaper = <HTMLElement>document.getElementById('exidyPaper');
 
-let exidyFile : ExidyFile = new ExidyFileBinaryAjax();
-let keyboard = new BrowserKeyboard();
+const exidyFile : ExidyFile = new ExidyFileBinaryAjax();
+const keyboard = new BrowserKeyboard();
 
-let exidySorcerer = new ExidySorcerer(
+const exidySorcerer = new ExidySorcerer(
 	exidyFile,
-	keyboard,
-	screenCanvas);
+	keyboard);
+
+screenContainer.appendChild(exidySorcerer.screenCanvas);
 
 //exidySorcerer.load('galx.snp');
 //exidySorcerer.loadRomPack('Exidy Standard Basic Ver 1.0 (1978).ROM');
@@ -25,19 +26,19 @@ let exidySorcerer = new ExidySorcerer(
 //exidySorcerer.loadDisk(3, 'disk4.dsk');
 //exidySorcerer.loadTape(0, 'chomp.tape');
 
-screenCanvas.addEventListener('keydown', (key) => {
+screenContainer.addEventListener('keydown', (key) => {
 	keyboard.browserKeyDown(key.keyCode);
 	key.stopPropagation();
 	key.preventDefault();
 });
 
-screenCanvas.addEventListener('keyup', (key) => {
+screenContainer.addEventListener('keyup', (key) => {
 	keyboard.browserKeyUp(key.keyCode);
 	key.stopPropagation();
 	key.preventDefault();
 });
 
-let printer = new ElementPrinter(printerPaper);
+const printer = new ElementPrinter(printerPaper);
 
 //exidySorcerer.centronics = printer;
 

@@ -12,13 +12,18 @@ export default class ExidyScreen extends Ram {
 
 	public constructor(
 		memory : Uint8Array,
-		charsCanvas : HTMLCanvasElement,
-		screenCanvas : HTMLCanvasElement)
+		charsCanvas : HTMLCanvasElement)
 	{
 		super(memory);
-		this.screenCanvas = screenCanvas;
+		this.screenCanvas = <HTMLCanvasElement>document.createElement('canvas');
+		this.screenCanvas.width = 512;
+		this.screenCanvas.height = 240;
 		this.charsCanvas = charsCanvas;
-		this.screenCtx = screenCanvas.getContext("2d");
+		this.screenCtx = this.screenCanvas.getContext("2d");
+	}
+
+	public get canvas() : HTMLCanvasElement {
+		return this.screenCanvas;
 	}
 
 	writeByte(address: number, data: number) : void {

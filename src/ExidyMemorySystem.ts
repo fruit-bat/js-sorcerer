@@ -41,8 +41,7 @@ export default class MemorySystem {
 	private exidyCharacters : ExidyCharacters;
 	private exidyScreen : ExidyScreen;
 
-	public constructor(
-		screenCanvas : HTMLCanvasElement)
+	public constructor()
 	{
 		this.multplexor.setHandler(0, MEMORY_SIZE_IN_BYTES, this.ram);
 
@@ -52,13 +51,17 @@ export default class MemorySystem {
     charsCanvas.width = 2048;
     charsCanvas.height = 8;
 
-		this.exidyScreen = new ExidyScreen(this._memory, charsCanvas, screenCanvas);
+		this.exidyScreen = new ExidyScreen(this._memory, charsCanvas);
 		this.exidyCharacters = new ExidyCharacters(this._memory, charsCanvas, (char) => {
 			this.exidyScreen.charUpdated(char);
 		});
 
 		this.multplexor.setHandler(SCREEN_START, SCREEN_SIZE_BYTES, this.exidyScreen);
 		this.multplexor.setHandler(CHARS_START, CHARS_SIZE_BYTES, this.exidyCharacters);
+	}
+
+	public get screenCanvas() : HTMLCanvasElement {
+		return this.exidyScreen.canvas;
 	}
 
 	public load(data : Uint8Array, address : number, start : number = 0) : void {
