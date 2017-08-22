@@ -134,12 +134,15 @@ const KEY_CONFIG : Array<KeyConfig> = [
 
 export default class BrowserKeyboard extends Keyboard {
 
-	private keyCodeToConfig;
+	private _keyCodeToConfig;
+	private _keyboard : Keyboard;
 
-	public constructor() {
+	public constructor(keyboard: Keyboard) {
 		super();
 
-		this.keyCodeToConfig = KEY_CONFIG.reduce(
+		this._keyboard = keyboard;
+
+		this._keyCodeToConfig = KEY_CONFIG.reduce(
 			(m, keyConfig) => {
 				m[keyConfig.keyCode] = keyConfig;
 				return m;
@@ -149,16 +152,16 @@ export default class BrowserKeyboard extends Keyboard {
 	}
 
 	public browserKeyUp(key : number) : void {
-		let mapping = this.keyCodeToConfig[key];
+		const mapping = this._keyCodeToConfig[key];
 		if(mapping) {
-			this.release(mapping.row, mapping.col);
+			this._keyboard.release(mapping.row, mapping.col);
 		}
 	}
 
 	public browserKeyDown(key : number) : void {
-		let mapping = this.keyCodeToConfig[key];
+		const mapping = this._keyCodeToConfig[key];
 		if(mapping) {
-			this.press(mapping.row, mapping.col);
+			this._keyboard.press(mapping.row, mapping.col);
 		}
 	}
 }

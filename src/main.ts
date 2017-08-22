@@ -8,11 +8,9 @@ const screenContainer = <HTMLDivElement>document.getElementById('exidy-screen-co
 const printerPaper = <HTMLElement>document.getElementById('exidyPaper');
 
 const exidyFile : ExidyFile = new ExidyFileBinaryAjax();
-const keyboard = new BrowserKeyboard();
 
-const exidySorcerer = new ExidySorcerer(
-	exidyFile,
-	keyboard);
+const exidySorcerer = new ExidySorcerer(exidyFile);
+const keyboard = new BrowserKeyboard(exidySorcerer.keyboard);
 
 screenContainer.appendChild(exidySorcerer.screenCanvas);
 

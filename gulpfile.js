@@ -12,6 +12,9 @@ gulp.task('copy', function() {
 
   gulp.src(['**/*'], {cwd: 'assets'})
    .pipe(gulp.dest(target));
+
+   gulp.src(['**/*.js'], {cwd: 'src'})
+    .pipe(gulp.dest(target));
 });
 
 gulp.task("tsify", function () {

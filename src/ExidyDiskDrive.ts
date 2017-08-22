@@ -46,7 +46,7 @@ export default class ExidyDiskDrive
 
 	public home() : boolean
 	{
-		return this._trackNumber == 0;
+		return this._trackNumber === 0;
 	}
 
 	public stepForward() : void

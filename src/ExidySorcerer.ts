@@ -24,25 +24,25 @@ const CYCLES_PER_DISK_TICK = 100000;
 
 export default class ExidySorcerer {
 
-	private cpu : Z80;
-	private memorySystem : MemorySystem;
-	private io : IoSystem;
-	private ready : Promise<any>;
-	private filesystem : ExidyFile;
-	private diskSystem : ExidyDiskSystem;
-	private cycles : number;
+	private cpu: Z80;
+	private memorySystem: MemorySystem;
+	private io: IoSystem;
+	private ready: Promise<any>;
+	private filesystem: ExidyFile;
+	private diskSystem: ExidyDiskSystem;
+	private cycles: number;
 	private typeSystem = new TapeSystem();
 	private centronicsSystem = new CentronicsSystem();
+	private _keyboard = new Keyboard();
 
 	public constructor(
-		filesystem : ExidyFile,
-		keyboard : Keyboard) {
+		filesystem : ExidyFile) {
 		this.filesystem = filesystem;
 		this.memorySystem = new MemorySystem();
 
 		this.io = new IoSystem();
-		this.io.output.addHandler(0xFE, keyboard);
-		this.io.input.setHandler(0xFE, keyboard);
+		this.io.output.addHandler(0xFE, this._keyboard);
+		this.io.input.setHandler(0xFE, this._keyboard);
 		this.io.output.addHandler(0xFE, this.typeSystem.control);
 		this.io.output.addHandler(0xFC, this.typeSystem.dataOutput);
 		this.io.input.setHandler(0xFC, this.typeSystem.dataInput);
@@ -67,6 +67,10 @@ export default class ExidySorcerer {
 		new DropZone(this.memorySystem.screenCanvas, (buffer) => {
 			this.loadSnpFromArray(new Uint8Array(buffer));
 		});
+	}
+
+	public get keyboard() : Keyboard {
+		return this._keyboard;
 	}
 
 	public get screenCanvas() : HTMLCanvasElement {
