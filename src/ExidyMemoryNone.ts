@@ -1,16 +1,16 @@
-"use strict"
+'use strict';
 
-import Memory from './ExidyMemory'
+import Memory from './ExidyMemory';
 
 export default class NoMemory implements Memory {
 
-	public constructor() {
-	}
+    public constructor() {
+    }
 
-	readByte(address: number): number {
-		return 0;
-	}
+    readByte(address: number): number {
+        return 0;
+    }
 
-	writeByte(address: number, data: number) : void {
-	}
+    writeByte(address: number, data: number): void {
+    }
 }

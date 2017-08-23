@@ -23,30 +23,29 @@
 ///  or at http://opensource.org/licenses/MIT
 ///////////////////////////////////////////////////////////////////////////////
 
-"use strict";
+'use strict';
 
 ///////////////////////////////////////////////////////////////////////////////
 /// We'll begin with the object constructor and the public API functions.
 ///////////////////////////////////////////////////////////////////////////////
-function Z80(core)
-{
+function Z80(core) {
    // The argument to this constructor should be an object containing 4 functions:
    // mem_read(address) should return the byte at the given memory address,
    // mem_write(address, value) should write the given value to the given memory address,
    // io_read(port) should read a return a byte read from the given I/O port,
    // io_write(port, value) should write the given byte to the given I/O port.
    // If any of those functions is missing, this module cannot run.
-   if (!core || (typeof core.mem_read !== "function") || (typeof core.mem_write !== "function") ||
-                (typeof core.io_read !== "function")  || (typeof core.io_write !== "function"))
-      throw("Z80: Core object is missing required functions.");
+   if (!core || (typeof core.mem_read !== 'function') || (typeof core.mem_write !== 'function') ||
+                (typeof core.io_read !== 'function')  || (typeof core.io_write !== 'function'))
+      throw('Z80: Core object is missing required functions.');
 
    if (this === window)
-      throw("Z80: This function is a constructor; call it using operator new.");
+      throw('Z80: This function is a constructor; call it using operator new.');
 
    // Obviously we'll be needing the core object's functions again.
    this.core = core;
 
-   // All right, let's initialize the registers.
+   // All right, let  's initialize the registers.
    // First, the standard 8080 registers.
    this.a = 0x00;
    this.b = 0x00;
@@ -77,8 +76,8 @@ function Z80(core)
    //  because most of the time we're only accessing a single flag,
    //  so we optimize for that case and use utility functions
    //  for the rarer occasions when we need to access the whole register.
-   this.flags = {S:0, Z:0, Y:0, H:0, X:0, P:0, N:0, C:0};
-   this.flags_prime = {S:0, Z:0, Y:0, H:0, X:0, P:0, N:0, C:0};
+   this.flags = {S: 0, Z: 0, Y: 0, H: 0, X: 0, P: 0, N: 0, C: 0};
+   this.flags_prime = {S: 0, Z: 0, Y: 0, H: 0, X: 0, P: 0, N: 0, C: 0};
    // And finally we have the interrupt mode and flip-flop registers.
    this.imode = 0;
    this.iff1 = 0;
@@ -110,8 +109,7 @@ function Z80(core)
 ///
 /// @brief Initialize the processor with persisted state
 ///////////////////////////////////////////////////////////////////////////////
-Z80.prototype.load = function(state)
-{
+Z80.prototype.load = function(state) {
    this.reset();
 
    this.i = state.i;
@@ -132,8 +130,8 @@ Z80.prototype.load = function(state)
    this.l = state.l;
    this.ix = state.ix;
    this.iy = state.iy;
-   this.iff1 = state.iff1
-   this.iff2 = state.iff2
+   this.iff1 = state.iff1;
+   this.iff2 = state.iff2;
    this.set_flags_register(state.f);
    this.r = state.r;
    this.imode = state.imode;
@@ -146,8 +144,7 @@ Z80.prototype.load = function(state)
 ///
 /// @brief Re-initialize the processor as if a reset or power on had occured
 ///////////////////////////////////////////////////////////////////////////////
-Z80.prototype.reset = function(pc)
-{
+Z80.prototype.reset = function(pc) {
    // These registers are the ones that have predictable states
    //  immediately following a power-on or a reset.
    // The others are left alone, because their states are unpredictable.
@@ -177,21 +174,17 @@ Z80.prototype.reset = function(pc)
 ///          plus any time that went into handling interrupts that fired
 ///          while this instruction was executing
 ///////////////////////////////////////////////////////////////////////////////
-Z80.prototype.run_instruction = function()
-{
-   if (!this.halted)
-   {
+Z80.prototype.run_instruction = function() {
+   if (!this.halted) {
       // If the previous instruction was a DI or an EI,
       //  we'll need to disable or enable interrupts
       //  after whatever instruction we're about to run is finished.
-      var doing_delayed_di = false, doing_delayed_ei = false;
-      if (this.do_delayed_di)
-      {
+      let doing_delayed_di = false, doing_delayed_ei = false;
+      if (this.do_delayed_di) {
          this.do_delayed_di = false;
          doing_delayed_di = true;
       }
-      else if (this.do_delayed_ei)
-      {
+      else if (this.do_delayed_ei) {
          this.do_delayed_ei = false;
          doing_delayed_ei = true;
       }
@@ -203,30 +196,27 @@ Z80.prototype.run_instruction = function()
       this.r = (this.r & 0x80) | (((this.r & 0x7f) + 1) & 0x7f);
 
       // Read the byte at the PC and run the instruction it encodes.
-      var opcode = this.core.mem_read(this.pc);
+      let opcode = this.core.mem_read(this.pc);
       this.decode_instruction(opcode);
       this.pc = (this.pc + 1) & 0xffff;
 
       // Actually do the delayed interrupt disable/enable if we have one.
-      if (doing_delayed_di)
-      {
+      if (doing_delayed_di) {
          this.iff1 = 0;
          this.iff2 = 0;
       }
-      else if (doing_delayed_ei)
-      {
+      else if (doing_delayed_ei) {
          this.iff1 = 1;
          this.iff2 = 1;
       }
 
       // And finally clear out the cycle counter for the next instruction
       //  before returning it to the emulator core.
-      var retval = this.cycle_counter;
+      let retval = this.cycle_counter;
       this.cycle_counter = 0;
       return retval;
    }
-   else
-   {
+   else {
       // While we're halted, claim that we spent a cycle doing nothing,
       //  so that the rest of the emulator can still proceed.
       return 1;
@@ -241,10 +231,8 @@ Z80.prototype.run_instruction = function()
 /// @param non_maskable - true if this is a non-maskable interrupt
 /// @param data - the value to be placed on the data bus, if needed
 ///////////////////////////////////////////////////////////////////////////////
-Z80.prototype.interrupt = function(non_maskable, data)
-{
-   if (non_maskable)
-   {
+Z80.prototype.interrupt = function(non_maskable, data) {
+   if (non_maskable) {
       // The high bit of R is not affected by this increment,
       //  it can only be changed using the LD R, A instruction.
       this.r = (this.r & 0x80) | (((this.r & 0x7f) + 1) & 0x7f);
@@ -258,8 +246,7 @@ Z80.prototype.interrupt = function(non_maskable, data)
       this.pc = 0x66;
       this.cycle_counter += 11;
    }
-   else if (this.iff1)
-   {
+   else if (this.iff1) {
       // The high bit of R is not affected by this increment,
       //  it can only be changed using the LD R, A instruction.
       this.r = (this.r & 0x80) | (((this.r & 0x7f) + 1) & 0x7f);
@@ -268,29 +255,26 @@ Z80.prototype.interrupt = function(non_maskable, data)
       this.iff1 = 0;
       this.iff2 = 0;
 
-      if (this.imode === 0)
-      {
+      if (this.imode === 0) {
          // In the 8080-compatible interrupt mode,
          //  decode the content of the data bus as an instruction and run it.
          this.decode_instruction(data);
          this.cycle_counter += 2;
       }
-      else if (this.imode === 1)
-      {
+      else if (this.imode === 1) {
          // Mode 1 is always just RST 0x38.
          this.push_word(this.pc);
          this.pc = 0x38;
          this.cycle_counter += 13;
       }
-      else if (this.imode === 2)
-      {
+      else if (this.imode === 2) {
          // Mode 2 uses the value on the data bus as in index
          //  into the vector table pointer to by the I register.
          this.push_word(this.pc);
          // The Z80 manual says that this address must be 2-byte aligned,
          //  but it doesn't appear that this is actually the case on the hardware,
          //  so we don't attempt to enforce that here.
-         var vector_address = ((this.i << 8) | data);
+         let vector_address = ((this.i << 8) | data);
          this.pc = this.core.read_mem_byte(vector_address) |
                    (this.core.read_mem_byte((vector_address + 1) & 0xffff) << 8);
 
@@ -303,9 +287,8 @@ Z80.prototype.interrupt = function(non_maskable, data)
 //  are all so uniform that we can decode them directly
 //  instead of going into the instruction array for them.
 // This function gets the operand for all of these instructions.
-var get_operand = function(opcode)
-{
-  var opcodeLowerBits = opcode & 0x07;
+let get_operand = function(opcode) {
+  let opcodeLowerBits = opcode & 0x07;
   return (opcodeLowerBits === 0) ? this.b :
          (opcodeLowerBits === 1) ? this.c :
          (opcodeLowerBits === 2) ? this.d :
@@ -320,24 +303,21 @@ var get_operand = function(opcode)
 ///
 /// What begins here are just general utility functions, used variously.
 ///////////////////////////////////////////////////////////////////////////////
-Z80.prototype.decode_instruction = function(opcode)
-{
+Z80.prototype.decode_instruction = function(opcode) {
 
 
    // Handle HALT right up front, because it fouls up our LD decoding
    //  by falling where LD (HL), (HL) ought to be.
-   if (opcode === 0x76)
-   {
+   if (opcode === 0x76) {
       this.halted = true;
       this.iff1 = 1;
       this.iff2 = 1;
    }
-   else if ((opcode >= 0x40) && (opcode < 0x80))
-   {
+   else if ((opcode >= 0x40) && (opcode < 0x80)) {
       // This entire range is all 8-bit register loads.
       // Get the operand and assign it to the correct destination.
-      var operand = get_operand.call(this, opcode);
-      var operandShifted = (opcode & 0x38) >>> 3;
+      let operand = get_operand.call(this, opcode);
+      let operandShifted = (opcode & 0x38) >>> 3;
 
       if (operandShifted === 0)
          this.b = operand;
@@ -356,23 +336,21 @@ Z80.prototype.decode_instruction = function(opcode)
       else if (operandShifted === 7)
          this.a = operand;
    }
-   else if ((opcode >= 0x80) && (opcode < 0xc0))
-   {
+   else if ((opcode >= 0x80) && (opcode < 0xc0)) {
       // These are the 8-bit register ALU instructions.
       // We'll get the operand and then use this "jump table"
       //  to call the correct utility function for the instruction.
-      var operand = get_operand.call(this, opcode);
+      let operand = get_operand.call(this, opcode);
 
       const op_array = [this.do_add, this.do_adc, this.do_sub, this.do_sbc,
                       this.do_and, this.do_xor, this.do_or, this.do_cp];
 
       op_array[(opcode & 0x38) >>> 3].call(this, operand);
    }
-   else
-   {
+   else {
       // This is one of the less formulaic instructions;
       //  we'll get the specific function for it from our array.
-      var func = this.instructions[opcode].bind(this);
+      let func = this.instructions[opcode].bind(this);
       func();
    }
 
@@ -383,8 +361,7 @@ Z80.prototype.decode_instruction = function(opcode)
    this.cycle_counter += this.cycle_counts[opcode];
 };
 
-Z80.prototype.get_signed_offset_byte = function(value)
-{
+Z80.prototype.get_signed_offset_byte = function(value) {
    // This function requires some explanation.
    // We just use JavaScript Number variables for our registers,
    //  not like a typed array or anything.
@@ -396,8 +373,7 @@ Z80.prototype.get_signed_offset_byte = function(value)
    // First, we clamp the value to a single byte, just in case.
    value &= 0xff;
    // We don't have to do anything if the value is positive.
-   if (value & 0x80)
-   {
+   if (value & 0x80) {
       // But if the value is negative, we need to manually un-two's-compliment it.
       // I'm going to assume you can figure out what I meant by that,
       //  because I don't know how else to explain it.
@@ -409,8 +385,7 @@ Z80.prototype.get_signed_offset_byte = function(value)
    return value;
 };
 
-Z80.prototype.get_flags_register = function()
-{
+Z80.prototype.get_flags_register = function() {
    // We need the whole F register for some reason.
    //  probably a PUSH AF instruction,
    //  so make the F register out of our separate flags.
@@ -424,8 +399,7 @@ Z80.prototype.get_flags_register = function()
           (this.flags.C);
 };
 
-Z80.prototype.get_flags_prime = function()
-{
+Z80.prototype.get_flags_prime = function() {
    // This is the same as the above for the F' register.
    return (this.flags_prime.S << 7) |
           (this.flags_prime.Z << 6) |
@@ -437,8 +411,7 @@ Z80.prototype.get_flags_prime = function()
           (this.flags_prime.C);
 };
 
-Z80.prototype.set_flags_register = function(operand)
-{
+Z80.prototype.set_flags_register = function(operand) {
    // We need to set the F register, probably for a POP AF,
    //  so break out the given value into our separate flags.
    this.flags.S = (operand & 0x80) >>> 7;
@@ -451,8 +424,7 @@ Z80.prototype.set_flags_register = function(operand)
    this.flags.C = (operand & 0x01);
 };
 
-Z80.prototype.set_flags_prime = function(operand)
-{
+Z80.prototype.set_flags_prime = function(operand) {
    // Again, this is the same as the above for F'.
    this.flags_prime.S = (operand & 0x80) >>> 7;
    this.flags_prime.Z = (operand & 0x40) >>> 6;
@@ -464,8 +436,7 @@ Z80.prototype.set_flags_prime = function(operand)
    this.flags_prime.C = (operand & 0x01);
 };
 
-Z80.prototype.update_xy_flags = function(result)
-{
+Z80.prototype.update_xy_flags = function(result) {
    // Most of the time, the undocumented flags
    //  (sometimes called X and Y, or 3 and 5),
    //  take their values from the corresponding bits
@@ -476,11 +447,10 @@ Z80.prototype.update_xy_flags = function(result)
    this.flags.X = (result & 0x08) >>> 3;
 };
 
-Z80.prototype.get_parity = function(value)
-{
+Z80.prototype.get_parity = function(value) {
    // We could try to actually calculate the parity every time,
    //  but why calculate what you can pre-calculate?
-   var parity_bits = [
+   let parity_bits = [
       1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
       0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
       0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
@@ -501,8 +471,7 @@ Z80.prototype.get_parity = function(value)
    return parity_bits[value];
 };
 
-Z80.prototype.push_word = function(operand)
-{
+Z80.prototype.push_word = function(operand) {
    // Pretty obvious what this function does; given a 16-bit value,
    //  decrement the stack pointer, write the high byte to the new
    //  stack pointer location, then repeat for the low byte.
@@ -512,11 +481,10 @@ Z80.prototype.push_word = function(operand)
    this.core.mem_write(this.sp, operand & 0x00ff);
 };
 
-Z80.prototype.pop_word = function()
-{
+Z80.prototype.pop_word = function() {
    // Again, not complicated; read a byte off the top of the stack,
    //  increment the stack pointer, rinse and repeat.
-   var retval = this.core.mem_read(this.sp) & 0xff;
+   let retval = this.core.mem_read(this.sp) & 0xff;
    this.sp = (this.sp + 1) & 0xffff;
    retval |= this.core.mem_read(this.sp) << 8;
    this.sp = (this.sp + 1) & 0xffff;
@@ -529,11 +497,9 @@ Z80.prototype.pop_word = function()
 ///  utility function that handles all variations of that instruction.
 /// Those utility functions begin here.
 ///////////////////////////////////////////////////////////////////////////////
-Z80.prototype.do_conditional_absolute_jump = function(condition)
-{
+Z80.prototype.do_conditional_absolute_jump = function(condition) {
    // This function implements the JP [condition],nn instructions.
-   if (condition)
-   {
+   if (condition) {
       // We're taking this jump, so write the new PC,
       //  and then decrement the thing we just wrote,
       //  because the instruction decoder increments the PC
@@ -543,73 +509,62 @@ Z80.prototype.do_conditional_absolute_jump = function(condition)
                 (this.core.mem_read((this.pc + 2) & 0xffff) << 8);
       this.pc = (this.pc - 1) & 0xffff;
    }
-   else
-   {
+   else {
       // We're not taking this jump, just move the PC past the operand.
       this.pc = (this.pc + 2) & 0xffff;
    }
 };
 
-Z80.prototype.do_conditional_relative_jump = function(condition)
-{
+Z80.prototype.do_conditional_relative_jump = function(condition) {
    // This function implements the JR [condition],n instructions.
-   if (condition)
-   {
+   if (condition) {
       // We need a few more cycles to actually take the jump.
       this.cycle_counter += 5;
       // Calculate the offset specified by our operand.
-      var offset = this.get_signed_offset_byte(this.core.mem_read((this.pc + 1) & 0xffff));
+      let offset = this.get_signed_offset_byte(this.core.mem_read((this.pc + 1) & 0xffff));
       // Add the offset to the PC, also skipping past this instruction.
       this.pc = (this.pc + offset + 1) & 0xffff;
    }
-   else
-   {
+   else {
       // No jump happening, just skip the operand.
       this.pc = (this.pc + 1) & 0xffff;
    }
 };
 
-Z80.prototype.do_conditional_call = function(condition)
-{
+Z80.prototype.do_conditional_call = function(condition) {
    // This function is the CALL [condition],nn instructions.
    // If you've seen the previous functions, you know this drill.
-   if (condition)
-   {
+   if (condition) {
       this.cycle_counter += 7;
       this.push_word((this.pc + 3) & 0xffff);
       this.pc =  this.core.mem_read((this.pc + 1) & 0xffff) |
                 (this.core.mem_read((this.pc + 2) & 0xffff) << 8);
       this.pc = (this.pc - 1) & 0xffff;
    }
-   else
-   {
+   else {
       this.pc = (this.pc + 2) & 0xffff;
    }
 };
 
-Z80.prototype.do_conditional_return = function(condition)
-{
-   if (condition)
-   {
+Z80.prototype.do_conditional_return = function(condition) {
+   if (condition) {
       this.cycle_counter += 6;
       this.pc = (this.pop_word() - 1) & 0xffff;
    }
 };
 
-Z80.prototype.do_reset = function(address)
-{
+Z80.prototype.do_reset = function(address) {
    // The RST [address] instructions go through here.
    this.push_word((this.pc + 1) & 0xffff);
    this.pc = (address - 1) & 0xffff;
 };
 
-Z80.prototype.do_add = function(operand)
-{
+Z80.prototype.do_add = function(operand) {
    // This is the ADD A, [operand] instructions.
    // We'll do the literal addition, which includes any overflow,
    //  so that we can more easily figure out whether we had
    //  an overflow or a carry and set the flags accordingly.
-   var result = this.a + operand;
+   let result = this.a + operand;
 
    // The great majority of the work for the arithmetic instructions
    //  turns out to be setting the flags rather than the actual operation.
@@ -626,9 +581,8 @@ Z80.prototype.do_add = function(operand)
    this.update_xy_flags(this.a);
 };
 
-Z80.prototype.do_adc = function(operand)
-{
-   var result = this.a + operand + this.flags.C;
+Z80.prototype.do_adc = function(operand) {
+   let result = this.a + operand + this.flags.C;
 
    this.flags.S = (result & 0x80) ? 1 : 0;
    this.flags.Z = !(result & 0xff) ? 1 : 0;
@@ -641,9 +595,8 @@ Z80.prototype.do_adc = function(operand)
    this.update_xy_flags(this.a);
 };
 
-Z80.prototype.do_sub = function(operand)
-{
-   var result = this.a - operand;
+Z80.prototype.do_sub = function(operand) {
+   let result = this.a - operand;
 
    this.flags.S = (result & 0x80) ? 1 : 0;
    this.flags.Z = !(result & 0xff) ? 1 : 0;
@@ -656,9 +609,8 @@ Z80.prototype.do_sub = function(operand)
    this.update_xy_flags(this.a);
 };
 
-Z80.prototype.do_sbc = function(operand)
-{
-   var result = this.a - operand - this.flags.C;
+Z80.prototype.do_sbc = function(operand) {
+   let result = this.a - operand - this.flags.C;
 
    this.flags.S = (result & 0x80) ? 1 : 0;
    this.flags.Z = !(result & 0xff) ? 1 : 0;
@@ -671,11 +623,10 @@ Z80.prototype.do_sbc = function(operand)
    this.update_xy_flags(this.a);
 };
 
-Z80.prototype.do_cp = function(operand)
-{
+Z80.prototype.do_cp = function(operand) {
    // A compare instruction is just a subtraction that doesn't save the value,
    //  so we implement it as... a subtraction that doesn't save the value.
-   var temp = this.a;
+   let temp = this.a;
    this.do_sub(operand);
    this.a = temp;
    // Since this instruction has no "result" value, the undocumented flags
@@ -683,8 +634,7 @@ Z80.prototype.do_cp = function(operand)
    this.update_xy_flags(operand);
 };
 
-Z80.prototype.do_and = function(operand)
-{
+Z80.prototype.do_and = function(operand) {
    // The logic instructions are all pretty straightforward.
    this.a &= operand & 0xff;
    this.flags.S = (this.a & 0x80) ? 1 : 0;
@@ -696,8 +646,7 @@ Z80.prototype.do_and = function(operand)
    this.update_xy_flags(this.a);
 };
 
-Z80.prototype.do_or = function(operand)
-{
+Z80.prototype.do_or = function(operand) {
    this.a = (operand | this.a) & 0xff;
    this.flags.S = (this.a & 0x80) ? 1 : 0;
    this.flags.Z = !this.a ? 1 : 0;
@@ -708,8 +657,7 @@ Z80.prototype.do_or = function(operand)
    this.update_xy_flags(this.a);
 };
 
-Z80.prototype.do_xor = function(operand)
-{
+Z80.prototype.do_xor = function(operand) {
    this.a = (operand ^ this.a) & 0xff;
    this.flags.S = (this.a & 0x80) ? 1 : 0;
    this.flags.Z = !this.a ? 1 : 0;
@@ -720,9 +668,8 @@ Z80.prototype.do_xor = function(operand)
    this.update_xy_flags(this.a);
 };
 
-Z80.prototype.do_inc = function(operand)
-{
-   var result = operand + 1;
+Z80.prototype.do_inc = function(operand) {
+   let result = operand + 1;
 
    this.flags.S = (result & 0x80) ? 1 : 0;
    this.flags.Z = !(result & 0xff) ? 1 : 0;
@@ -737,9 +684,8 @@ Z80.prototype.do_inc = function(operand)
    return result;
 };
 
-Z80.prototype.do_dec = function(operand)
-{
-   var result = operand - 1;
+Z80.prototype.do_dec = function(operand) {
+   let result = operand - 1;
 
    this.flags.S = (result & 0x80) ? 1 : 0;
    this.flags.Z = !(result & 0xff) ? 1 : 0;
@@ -753,11 +699,10 @@ Z80.prototype.do_dec = function(operand)
    return result;
 };
 
-Z80.prototype.do_hl_add = function(operand)
-{
+Z80.prototype.do_hl_add = function(operand) {
    // The HL arithmetic instructions are the same as the A ones,
    //  just with twice as many bits happening.
-   var hl = this.l | (this.h << 8), result = hl + operand;
+   let hl = this.l | (this.h << 8), result = hl + operand;
 
    this.flags.N = 0;
    this.flags.C = (result & 0x10000) ? 1 : 0;
@@ -769,10 +714,9 @@ Z80.prototype.do_hl_add = function(operand)
    this.update_xy_flags(this.h);
 };
 
-Z80.prototype.do_hl_adc = function(operand)
-{
+Z80.prototype.do_hl_adc = function(operand) {
    operand += this.flags.C;
-   var hl = this.l | (this.h << 8), result = hl + operand;
+   let hl = this.l | (this.h << 8), result = hl + operand;
 
    this.flags.S = (result & 0x8000) ? 1 : 0;
    this.flags.Z = !(result & 0xffff) ? 1 : 0;
@@ -787,10 +731,9 @@ Z80.prototype.do_hl_adc = function(operand)
    this.update_xy_flags(this.h);
 };
 
-Z80.prototype.do_hl_sbc = function(operand)
-{
+Z80.prototype.do_hl_sbc = function(operand) {
    operand += this.flags.C;
-   var hl = this.l | (this.h << 8), result = hl - operand;
+   let hl = this.l | (this.h << 8), result = hl - operand;
 
    this.flags.S = (result & 0x8000) ? 1 : 0;
    this.flags.Z = !(result & 0xffff) ? 1 : 0;
@@ -805,9 +748,8 @@ Z80.prototype.do_hl_sbc = function(operand)
    this.update_xy_flags(this.h);
 };
 
-Z80.prototype.do_in = function(port)
-{
-   var result = this.core.io_read(port);
+Z80.prototype.do_in = function(port) {
+   let result = this.core.io_read(port);
 
    this.flags.S = (result & 0x80) ? 1 : 0;
    this.flags.Z = result ? 0 : 1;
@@ -819,11 +761,9 @@ Z80.prototype.do_in = function(port)
    return result;
 };
 
-Z80.prototype.do_neg = function()
-{
+Z80.prototype.do_neg = function() {
    // This instruction is defined to not alter the register if it === 0x80.
-   if (this.a !== 0x80)
-   {
+   if (this.a !== 0x80) {
       // This is a signed operation, so convert A to a signed value.
       this.a = this.get_signed_offset_byte(this.a);
 
@@ -839,14 +779,13 @@ Z80.prototype.do_neg = function()
    this.update_xy_flags(this.a);
 };
 
-Z80.prototype.do_ldi = function()
-{
+Z80.prototype.do_ldi = function() {
    // Copy the value that we're supposed to copy.
-   var read_value = this.core.mem_read(this.l | (this.h << 8));
+   let read_value = this.core.mem_read(this.l | (this.h << 8));
    this.core.mem_write(this.e | (this.d << 8), read_value);
 
    // Increment DE and HL, and decrement BC.
-   var result = (this.e | (this.d << 8)) + 1;
+   let result = (this.e | (this.d << 8)) + 1;
    this.e = result & 0xff;
    this.d = (result & 0xff00) >>> 8;
    result = (this.l | (this.h << 8)) + 1;
@@ -863,16 +802,15 @@ Z80.prototype.do_ldi = function()
    this.flags.X = ((this.a + read_value) & 0x08) >>> 3;
 };
 
-Z80.prototype.do_cpi = function()
-{
-   var temp_carry = this.flags.C;
-   var read_value = this.core.mem_read(this.l | (this.h << 8))
+Z80.prototype.do_cpi = function() {
+   let temp_carry = this.flags.C;
+   let read_value = this.core.mem_read(this.l | (this.h << 8));
    this.do_cp(read_value);
    this.flags.C = temp_carry;
    this.flags.Y = ((this.a - read_value - this.flags.H) & 0x02) >>> 1;
    this.flags.X = ((this.a - read_value - this.flags.H) & 0x08) >>> 3;
 
-   var result = (this.l | (this.h << 8)) + 1;
+   let result = (this.l | (this.h << 8)) + 1;
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
    result = (this.c | (this.b << 8)) - 1;
@@ -882,24 +820,22 @@ Z80.prototype.do_cpi = function()
    this.flags.P = result ? 1 : 0;
 };
 
-Z80.prototype.do_ini = function()
-{
+Z80.prototype.do_ini = function() {
    this.b = this.do_dec(this.b);
 
    this.core.mem_write(this.l | (this.h << 8), this.core.io_read((this.b << 8) | this.c));
 
-   var result = (this.l | (this.h << 8)) + 1;
+   let result = (this.l | (this.h << 8)) + 1;
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
 
    this.flags.N = 1;
 };
 
-Z80.prototype.do_outi = function()
-{
+Z80.prototype.do_outi = function() {
    this.core.io_write((this.b << 8) | this.c, this.core.mem_read(this.l | (this.h << 8)));
 
-   var result = (this.l | (this.h << 8)) + 1;
+   let result = (this.l | (this.h << 8)) + 1;
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
 
@@ -907,15 +843,14 @@ Z80.prototype.do_outi = function()
    this.flags.N = 1;
 };
 
-Z80.prototype.do_ldd = function()
-{
+Z80.prototype.do_ldd = function() {
    this.flags.N = 0;
    this.flags.H = 0;
 
-   var read_value = this.core.mem_read(this.l | (this.h << 8));
+   let read_value = this.core.mem_read(this.l | (this.h << 8));
    this.core.mem_write(this.e | (this.d << 8), read_value);
 
-   var result = (this.e | (this.d << 8)) - 1;
+   let result = (this.e | (this.d << 8)) - 1;
    this.e = result & 0xff;
    this.d = (result & 0xff00) >>> 8;
    result = (this.l | (this.h << 8)) - 1;
@@ -930,16 +865,15 @@ Z80.prototype.do_ldd = function()
    this.flags.X = ((this.a + read_value) & 0x08) >>> 3;
 };
 
-Z80.prototype.do_cpd = function()
-{
-   var temp_carry = this.flags.C
-   var read_value = this.core.mem_read(this.l | (this.h << 8))
+Z80.prototype.do_cpd = function() {
+   let temp_carry = this.flags.C;
+   let read_value = this.core.mem_read(this.l | (this.h << 8));
    this.do_cp(read_value);
    this.flags.C = temp_carry;
    this.flags.Y = ((this.a - read_value - this.flags.H) & 0x02) >>> 1;
    this.flags.X = ((this.a - read_value - this.flags.H) & 0x08) >>> 3;
 
-   var result = (this.l | (this.h << 8)) - 1;
+   let result = (this.l | (this.h << 8)) - 1;
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
    result = (this.c | (this.b << 8)) - 1;
@@ -949,24 +883,22 @@ Z80.prototype.do_cpd = function()
    this.flags.P = result ? 1 : 0;
 };
 
-Z80.prototype.do_ind = function()
-{
+Z80.prototype.do_ind = function() {
    this.b = this.do_dec(this.b);
 
    this.core.mem_write(this.l | (this.h << 8), this.core.io_read((this.b << 8) | this.c));
 
-   var result = (this.l | (this.h << 8)) - 1;
+   let result = (this.l | (this.h << 8)) - 1;
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
 
    this.flags.N = 1;
 };
 
-Z80.prototype.do_outd = function()
-{
+Z80.prototype.do_outd = function() {
    this.core.io_write((this.b << 8) | this.c, this.core.mem_read(this.l | (this.h << 8)));
 
-   var result = (this.l | (this.h << 8)) - 1;
+   let result = (this.l | (this.h << 8)) - 1;
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
 
@@ -974,8 +906,7 @@ Z80.prototype.do_outd = function()
    this.flags.N = 1;
 };
 
-Z80.prototype.do_rlc = function(operand)
-{
+Z80.prototype.do_rlc = function(operand) {
    this.flags.N = 0;
    this.flags.H = 0;
 
@@ -990,8 +921,7 @@ Z80.prototype.do_rlc = function(operand)
    return operand;
 };
 
-Z80.prototype.do_rrc = function(operand)
-{
+Z80.prototype.do_rrc = function(operand) {
    this.flags.N = 0;
    this.flags.H = 0;
 
@@ -1006,12 +936,11 @@ Z80.prototype.do_rrc = function(operand)
    return operand & 0xff;
 };
 
-Z80.prototype.do_rl = function(operand)
-{
+Z80.prototype.do_rl = function(operand) {
    this.flags.N = 0;
    this.flags.H = 0;
 
-   var temp = this.flags.C;
+   let temp = this.flags.C;
    this.flags.C = (operand & 0x80) >>> 7;
    operand = ((operand << 1) | temp) & 0xff;
 
@@ -1023,12 +952,11 @@ Z80.prototype.do_rl = function(operand)
    return operand;
 };
 
-Z80.prototype.do_rr = function(operand)
-{
+Z80.prototype.do_rr = function(operand) {
    this.flags.N = 0;
    this.flags.H = 0;
 
-   var temp = this.flags.C;
+   let temp = this.flags.C;
    this.flags.C = operand & 1;
    operand = ((operand >>> 1) & 0x7f) | (temp << 7);
 
@@ -1040,8 +968,7 @@ Z80.prototype.do_rr = function(operand)
    return operand;
 };
 
-Z80.prototype.do_sla = function(operand)
-{
+Z80.prototype.do_sla = function(operand) {
    this.flags.N = 0;
    this.flags.H = 0;
 
@@ -1056,8 +983,7 @@ Z80.prototype.do_sla = function(operand)
    return operand;
 };
 
-Z80.prototype.do_sra = function(operand)
-{
+Z80.prototype.do_sra = function(operand) {
    this.flags.N = 0;
    this.flags.H = 0;
 
@@ -1072,8 +998,7 @@ Z80.prototype.do_sra = function(operand)
    return operand;
 };
 
-Z80.prototype.do_sll = function(operand)
-{
+Z80.prototype.do_sll = function(operand) {
    this.flags.N = 0;
    this.flags.H = 0;
 
@@ -1088,8 +1013,7 @@ Z80.prototype.do_sll = function(operand)
    return operand;
 };
 
-Z80.prototype.do_srl = function(operand)
-{
+Z80.prototype.do_srl = function(operand) {
    this.flags.N = 0;
    this.flags.H = 0;
 
@@ -1104,11 +1028,10 @@ Z80.prototype.do_srl = function(operand)
    return operand;
 };
 
-Z80.prototype.do_ix_add = function(operand)
-{
+Z80.prototype.do_ix_add = function(operand) {
    this.flags.N = 0;
 
-   var result = this.ix + operand;
+   let result = this.ix + operand;
 
    this.flags.C = (result & 0x10000) ? 1 : 0;
    this.flags.H = (((this.ix & 0xfff) + (operand & 0xfff)) & 0x1000) ? 1 : 0;
@@ -1129,59 +1052,51 @@ Z80.prototype.instructions = [];
 // 0x00 : NOP
 Z80.prototype.instructions[0x00] = function() { };
 // 0x01 : LD BC, nn
-Z80.prototype.instructions[0x01] = function()
-{
+Z80.prototype.instructions[0x01] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.c = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    this.b = this.core.mem_read(this.pc);
 };
 // 0x02 : LD (BC), A
-Z80.prototype.instructions[0x02] = function()
-{
+Z80.prototype.instructions[0x02] = function() {
    this.core.mem_write(this.c | (this.b << 8), this.a);
 };
 // 0x03 : INC BC
-Z80.prototype.instructions[0x03] = function()
-{
-   var result = (this.c | (this.b << 8));
+Z80.prototype.instructions[0x03] = function() {
+   let result = (this.c | (this.b << 8));
    result += 1;
    this.c = result & 0xff;
    this.b = (result & 0xff00) >>> 8;
 };
 // 0x04 : INC B
-Z80.prototype.instructions[0x04] = function()
-{
+Z80.prototype.instructions[0x04] = function() {
    this.b = this.do_inc(this.b);
 };
 // 0x05 : DEC B
-Z80.prototype.instructions[0x05] = function()
-{
+Z80.prototype.instructions[0x05] = function() {
    this.b = this.do_dec(this.b);
 };
 // 0x06 : LD B, n
-Z80.prototype.instructions[0x06] = function()
-{
+Z80.prototype.instructions[0x06] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.b = this.core.mem_read(this.pc);
 };
 // 0x07 : RLCA
-Z80.prototype.instructions[0x07] = function()
-{
+Z80.prototype.instructions[0x07] = function() {
    // This instruction is implemented as a special case of the
    //  more general Z80-specific RLC instruction.
    // Specifially, RLCA is a version of RLC A that affects fewer flags.
    // The same applies to RRCA, RLA, and RRA.
-   var temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
+   let temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
    this.a = this.do_rlc(this.a);
    this.flags.S = temp_s;
    this.flags.Z = temp_z;
    this.flags.P = temp_p;
 };
 // 0x08 : EX AF, AF'
-Z80.prototype.instructions[0x08] = function()
-{
-   var temp = this.a;
+Z80.prototype.instructions[0x08] = function() {
+   let temp = this.a;
    this.a = this.a_prime;
    this.a_prime = temp;
 
@@ -1190,167 +1105,141 @@ Z80.prototype.instructions[0x08] = function()
    this.set_flags_prime(temp);
 };
 // 0x09 : ADD HL, BC
-Z80.prototype.instructions[0x09] = function()
-{
+Z80.prototype.instructions[0x09] = function() {
    this.do_hl_add(this.c | (this.b << 8));
 };
 // 0x0a : LD A, (BC)
-Z80.prototype.instructions[0x0a] = function()
-{
+Z80.prototype.instructions[0x0a] = function() {
    this.a = this.core.mem_read(this.c | (this.b << 8));
 };
 // 0x0b : DEC BC
-Z80.prototype.instructions[0x0b] = function()
-{
-   var result = (this.c | (this.b << 8));
+Z80.prototype.instructions[0x0b] = function() {
+   let result = (this.c | (this.b << 8));
    result -= 1;
    this.c = result & 0xff;
    this.b = (result & 0xff00) >>> 8;
 };
 // 0x0c : INC C
-Z80.prototype.instructions[0x0c] = function()
-{
+Z80.prototype.instructions[0x0c] = function() {
    this.c = this.do_inc(this.c);
 };
 // 0x0d : DEC C
-Z80.prototype.instructions[0x0d] = function()
-{
+Z80.prototype.instructions[0x0d] = function() {
    this.c = this.do_dec(this.c);
 };
 // 0x0e : LD C, n
-Z80.prototype.instructions[0x0e] = function()
-{
+Z80.prototype.instructions[0x0e] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.c = this.core.mem_read(this.pc);
 };
 // 0x0f : RRCA
-Z80.prototype.instructions[0x0f] = function()
-{
-   var temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
+Z80.prototype.instructions[0x0f] = function() {
+   let temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
    this.a = this.do_rrc(this.a);
    this.flags.S = temp_s;
    this.flags.Z = temp_z;
    this.flags.P = temp_p;
 };
 // 0x10 : DJNZ nn
-Z80.prototype.instructions[0x10] = function()
-{
+Z80.prototype.instructions[0x10] = function() {
    this.b = (this.b - 1) & 0xff;
    this.do_conditional_relative_jump(this.b !== 0);
 };
 // 0x11 : LD DE, nn
-Z80.prototype.instructions[0x11] = function()
-{
+Z80.prototype.instructions[0x11] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.e = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    this.d = this.core.mem_read(this.pc);
 };
 // 0x12 : LD (DE), A
-Z80.prototype.instructions[0x12] = function()
-{
+Z80.prototype.instructions[0x12] = function() {
    this.core.mem_write(this.e | (this.d << 8), this.a);
 };
 // 0x13 : INC DE
-Z80.prototype.instructions[0x13] = function()
-{
-   var result = (this.e | (this.d << 8));
+Z80.prototype.instructions[0x13] = function() {
+   let result = (this.e | (this.d << 8));
    result += 1;
    this.e = result & 0xff;
    this.d = (result & 0xff00) >>> 8;
 };
 // 0x14 : INC D
-Z80.prototype.instructions[0x14] = function()
-{
+Z80.prototype.instructions[0x14] = function() {
    this.d = this.do_inc(this.d);
 };
 // 0x15 : DEC D
-Z80.prototype.instructions[0x15] = function()
-{
+Z80.prototype.instructions[0x15] = function() {
    this.d = this.do_dec(this.d);
 };
 // 0x16 : LD D, n
-Z80.prototype.instructions[0x16] = function()
-{
+Z80.prototype.instructions[0x16] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.d = this.core.mem_read(this.pc);
 };
 // 0x17 : RLA
-Z80.prototype.instructions[0x17] = function()
-{
-   var temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
+Z80.prototype.instructions[0x17] = function() {
+   let temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
    this.a = this.do_rl(this.a);
    this.flags.S = temp_s;
    this.flags.Z = temp_z;
    this.flags.P = temp_p;
 };
 // 0x18 : JR n
-Z80.prototype.instructions[0x18] = function()
-{
-   var offset = this.get_signed_offset_byte(this.core.mem_read((this.pc + 1) & 0xffff));
+Z80.prototype.instructions[0x18] = function() {
+   let offset = this.get_signed_offset_byte(this.core.mem_read((this.pc + 1) & 0xffff));
    this.pc = (this.pc + offset + 1) & 0xffff;
 };
 // 0x19 : ADD HL, DE
-Z80.prototype.instructions[0x19] = function()
-{
+Z80.prototype.instructions[0x19] = function() {
    this.do_hl_add(this.e | (this.d << 8));
 };
 // 0x1a : LD A, (DE)
-Z80.prototype.instructions[0x1a] = function()
-{
+Z80.prototype.instructions[0x1a] = function() {
    this.a = this.core.mem_read(this.e | (this.d << 8));
 };
 // 0x1b : DEC DE
-Z80.prototype.instructions[0x1b] = function()
-{
-   var result = (this.e | (this.d << 8));
+Z80.prototype.instructions[0x1b] = function() {
+   let result = (this.e | (this.d << 8));
    result -= 1;
    this.e = result & 0xff;
    this.d = (result & 0xff00) >>> 8;
 };
 // 0x1c : INC E
-Z80.prototype.instructions[0x1c] = function()
-{
+Z80.prototype.instructions[0x1c] = function() {
    this.e = this.do_inc(this.e);
 };
 // 0x1d : DEC E
-Z80.prototype.instructions[0x1d] = function()
-{
+Z80.prototype.instructions[0x1d] = function() {
    this.e = this.do_dec(this.e);
 };
 // 0x1e : LD E, n
-Z80.prototype.instructions[0x1e] = function()
-{
+Z80.prototype.instructions[0x1e] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.e = this.core.mem_read(this.pc);
 };
 // 0x1f : RRA
-Z80.prototype.instructions[0x1f] = function()
-{
-   var temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
+Z80.prototype.instructions[0x1f] = function() {
+   let temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
    this.a = this.do_rr(this.a);
    this.flags.S = temp_s;
    this.flags.Z = temp_z;
    this.flags.P = temp_p;
 };
 // 0x20 : JR NZ, n
-Z80.prototype.instructions[0x20] = function()
-{
+Z80.prototype.instructions[0x20] = function() {
    this.do_conditional_relative_jump(!this.flags.Z);
 };
 // 0x21 : LD HL, nn
-Z80.prototype.instructions[0x21] = function()
-{
+Z80.prototype.instructions[0x21] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.l = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    this.h = this.core.mem_read(this.pc);
 };
 // 0x22 : LD (nn), HL
-Z80.prototype.instructions[0x22] = function()
-{
+Z80.prototype.instructions[0x22] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var address = this.core.mem_read(this.pc);
+   let address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
 
@@ -1358,42 +1247,35 @@ Z80.prototype.instructions[0x22] = function()
    this.core.mem_write((address + 1) & 0xffff, this.h);
 };
 // 0x23 : INC HL
-Z80.prototype.instructions[0x23] = function()
-{
-   var result = (this.l | (this.h << 8));
+Z80.prototype.instructions[0x23] = function() {
+   let result = (this.l | (this.h << 8));
    result += 1;
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
 };
 // 0x24 : INC H
-Z80.prototype.instructions[0x24] = function()
-{
+Z80.prototype.instructions[0x24] = function() {
    this.h = this.do_inc(this.h);
 };
 // 0x25 : DEC H
-Z80.prototype.instructions[0x25] = function()
-{
+Z80.prototype.instructions[0x25] = function() {
    this.h = this.do_dec(this.h);
 };
 // 0x26 : LD H, n
-Z80.prototype.instructions[0x26] = function()
-{
+Z80.prototype.instructions[0x26] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.h = this.core.mem_read(this.pc);
 };
 // 0x27 : DAA
-Z80.prototype.instructions[0x27] = function()
-{
-   var temp = this.a;
-   if (!this.flags.N)
-   {
+Z80.prototype.instructions[0x27] = function() {
+   let temp = this.a;
+   if (!this.flags.N) {
       if (this.flags.H || ((this.a & 0x0f) > 9))
          temp += 0x06;
       if (this.flags.C || (this.a > 0x99))
          temp += 0x60;
    }
-   else
-   {
+   else {
       if (this.flags.H || ((this.a & 0x0f) > 9))
          temp -= 0x06;
       if (this.flags.C || (this.a > 0x99))
@@ -1415,20 +1297,17 @@ Z80.prototype.instructions[0x27] = function()
    this.update_xy_flags(this.a);
 };
 // 0x28 : JR Z, n
-Z80.prototype.instructions[0x28] = function()
-{
+Z80.prototype.instructions[0x28] = function() {
    this.do_conditional_relative_jump(!!this.flags.Z);
 };
 // 0x29 : ADD HL, HL
-Z80.prototype.instructions[0x29] = function()
-{
+Z80.prototype.instructions[0x29] = function() {
    this.do_hl_add(this.l | (this.h << 8));
 };
 // 0x2a : LD HL, (nn)
-Z80.prototype.instructions[0x2a] = function()
-{
+Z80.prototype.instructions[0x2a] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var address = this.core.mem_read(this.pc);
+   let address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
 
@@ -1436,202 +1315,169 @@ Z80.prototype.instructions[0x2a] = function()
    this.h = this.core.mem_read((address + 1) & 0xffff);
 };
 // 0x2b : DEC HL
-Z80.prototype.instructions[0x2b] = function()
-{
-   var result = (this.l | (this.h << 8));
+Z80.prototype.instructions[0x2b] = function() {
+   let result = (this.l | (this.h << 8));
    result -= 1;
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
 };
 // 0x2c : INC L
-Z80.prototype.instructions[0x2c] = function()
-{
+Z80.prototype.instructions[0x2c] = function() {
    this.l = this.do_inc(this.l);
 };
 // 0x2d : DEC L
-Z80.prototype.instructions[0x2d] = function()
-{
+Z80.prototype.instructions[0x2d] = function() {
    this.l = this.do_dec(this.l);
 };
 // 0x2e : LD L, n
-Z80.prototype.instructions[0x2e] = function()
-{
+Z80.prototype.instructions[0x2e] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.l = this.core.mem_read(this.pc);
 };
 // 0x2f : CPL
-Z80.prototype.instructions[0x2f] = function()
-{
+Z80.prototype.instructions[0x2f] = function() {
    this.a = (~this.a) & 0xff;
    this.flags.N = 1;
    this.flags.H = 1;
    this.update_xy_flags(this.a);
 };
 // 0x30 : JR NC, n
-Z80.prototype.instructions[0x30] = function()
-{
+Z80.prototype.instructions[0x30] = function() {
    this.do_conditional_relative_jump(!this.flags.C);
 };
 // 0x31 : LD SP, nn
-Z80.prototype.instructions[0x31] = function()
-{
+Z80.prototype.instructions[0x31] = function() {
    this.sp =  this.core.mem_read((this.pc + 1) & 0xffff) |
             (this.core.mem_read((this.pc + 2) & 0xffff) << 8);
    this.pc = (this.pc + 2) & 0xffff;
 };
 // 0x32 : LD (nn), A
-Z80.prototype.instructions[0x32] = function()
-{
+Z80.prototype.instructions[0x32] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var address = this.core.mem_read(this.pc);
+   let address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
 
    this.core.mem_write(address, this.a);
 };
 // 0x33 : INC SP
-Z80.prototype.instructions[0x33] = function()
-{
+Z80.prototype.instructions[0x33] = function() {
    this.sp = (this.sp + 1) & 0xffff;
 };
 // 0x34 : INC (HL)
-Z80.prototype.instructions[0x34] = function()
-{
-   var address = this.l | (this.h << 8);
+Z80.prototype.instructions[0x34] = function() {
+   let address = this.l | (this.h << 8);
    this.core.mem_write(address, this.do_inc(this.core.mem_read(address)));
 };
 // 0x35 : DEC (HL)
-Z80.prototype.instructions[0x35] = function()
-{
-   var address = this.l | (this.h << 8);
+Z80.prototype.instructions[0x35] = function() {
+   let address = this.l | (this.h << 8);
    this.core.mem_write(address, this.do_dec(this.core.mem_read(address)));
 };
 // 0x36 : LD (HL), n
-Z80.prototype.instructions[0x36] = function()
-{
+Z80.prototype.instructions[0x36] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.core.mem_write(this.l | (this.h << 8), this.core.mem_read(this.pc));
 };
 // 0x37 : SCF
-Z80.prototype.instructions[0x37] = function()
-{
+Z80.prototype.instructions[0x37] = function() {
    this.flags.N = 0;
    this.flags.H = 0;
    this.flags.C = 1;
    this.update_xy_flags(this.a);
 };
 // 0x38 : JR C, n
-Z80.prototype.instructions[0x38] = function()
-{
+Z80.prototype.instructions[0x38] = function() {
    this.do_conditional_relative_jump(!!this.flags.C);
 };
 // 0x39 : ADD HL, SP
-Z80.prototype.instructions[0x39] = function()
-{
+Z80.prototype.instructions[0x39] = function() {
    this.do_hl_add(this.sp);
 };
 // 0x3a : LD A, (nn)
-Z80.prototype.instructions[0x3a] = function()
-{
+Z80.prototype.instructions[0x3a] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var address = this.core.mem_read(this.pc);
+   let address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
 
    this.a = this.core.mem_read(address);
 };
 // 0x3b : DEC SP
-Z80.prototype.instructions[0x3b] = function()
-{
+Z80.prototype.instructions[0x3b] = function() {
    this.sp = (this.sp - 1) & 0xffff;
 };
 // 0x3c : INC A
-Z80.prototype.instructions[0x3c] = function()
-{
+Z80.prototype.instructions[0x3c] = function() {
    this.a = this.do_inc(this.a);
 };
 // 0x3d : DEC A
-Z80.prototype.instructions[0x3d] = function()
-{
+Z80.prototype.instructions[0x3d] = function() {
    this.a = this.do_dec(this.a);
 };
 // 0x3e : LD A, n
-Z80.prototype.instructions[0x3e] = function()
-{
+Z80.prototype.instructions[0x3e] = function() {
    this.a = this.core.mem_read((this.pc + 1) & 0xffff);
    this.pc = (this.pc + 1) & 0xffff;
 };
 // 0x3f : CCF
-Z80.prototype.instructions[0x3f] = function()
-{
+Z80.prototype.instructions[0x3f] = function() {
    this.flags.N = 0;
    this.flags.H = this.flags.C;
    this.flags.C = this.flags.C ? 0 : 1;
    this.update_xy_flags(this.a);
 };
 // 0xc0 : RET NZ
-Z80.prototype.instructions[0xc0] = function()
-{
+Z80.prototype.instructions[0xc0] = function() {
    this.do_conditional_return(!this.flags.Z);
 };
 // 0xc1 : POP BC
-Z80.prototype.instructions[0xc1] = function()
-{
-   var result = this.pop_word();
+Z80.prototype.instructions[0xc1] = function() {
+   let result = this.pop_word();
    this.c = result & 0xff;
    this.b = (result & 0xff00) >>> 8;
 };
 // 0xc2 : JP NZ, nn
-Z80.prototype.instructions[0xc2] = function()
-{
+Z80.prototype.instructions[0xc2] = function() {
    this.do_conditional_absolute_jump(!this.flags.Z);
 };
 // 0xc3 : JP nn
-Z80.prototype.instructions[0xc3] = function()
-{
+Z80.prototype.instructions[0xc3] = function() {
    this.pc =  this.core.mem_read((this.pc + 1) & 0xffff) |
             (this.core.mem_read((this.pc + 2) & 0xffff) << 8);
    this.pc = (this.pc - 1) & 0xffff;
 };
 // 0xc4 : CALL NZ, nn
-Z80.prototype.instructions[0xc4] = function()
-{
+Z80.prototype.instructions[0xc4] = function() {
    this.do_conditional_call(!this.flags.Z);
 };
 // 0xc5 : PUSH BC
-Z80.prototype.instructions[0xc5] = function()
-{
+Z80.prototype.instructions[0xc5] = function() {
    this.push_word(this.c | (this.b << 8));
 };
 // 0xc6 : ADD A, n
-Z80.prototype.instructions[0xc6] = function()
-{
+Z80.prototype.instructions[0xc6] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.do_add(this.core.mem_read(this.pc));
 };
 // 0xc7 : RST 00h
-Z80.prototype.instructions[0xc7] = function()
-{
+Z80.prototype.instructions[0xc7] = function() {
    this.do_reset(0x00);
 };
 // 0xc8 : RET Z
-Z80.prototype.instructions[0xc8] = function()
-{
+Z80.prototype.instructions[0xc8] = function() {
    this.do_conditional_return(!!this.flags.Z);
 };
 // 0xc9 : RET
-Z80.prototype.instructions[0xc9] = function()
-{
+Z80.prototype.instructions[0xc9] = function() {
    this.pc = (this.pop_word() - 1) & 0xffff;
 };
 // 0xca : JP Z, nn
-Z80.prototype.instructions[0xca] = function()
-{
+Z80.prototype.instructions[0xca] = function() {
    this.do_conditional_absolute_jump(!!this.flags.Z);
 };
 // 0xcb : CB Prefix
-Z80.prototype.instructions[0xcb] = function()
-{
+Z80.prototype.instructions[0xcb] = function() {
    // R is incremented at the start of the second instruction cycle,
    //  before the instruction actually runs.
    // The high bit of R is not affected by this increment,
@@ -1641,12 +1487,11 @@ Z80.prototype.instructions[0xcb] = function()
    // We don't have a table for this prefix,
    //  the instructions are all so uniform that we can directly decode them.
    this.pc = (this.pc + 1) & 0xffff;
-   var opcode = this.core.mem_read(this.pc),
+   let opcode = this.core.mem_read(this.pc),
        bit_number = (opcode & 0x38) >>> 3,
        reg_code = opcode & 0x07;
 
-   if (opcode < 0x40)
-   {
+   if (opcode < 0x40) {
       // Shift/rotate instructions
       const op_array = [this.do_rlc, this.do_rrc, this.do_rl, this.do_rr,
                       this.do_sla, this.do_sra, this.do_sll, this.do_srl];
@@ -1669,8 +1514,7 @@ Z80.prototype.instructions[0xcb] = function()
       else if (reg_code === 7)
          this.a = op_array[bit_number].call(this, this.a);
    }
-   else if (opcode < 0x80)
-   {
+   else if (opcode < 0x80) {
       // BIT instructions
       if (reg_code === 0)
          this.flags.Z = !(this.b & (1 << bit_number)) ? 1 : 0;
@@ -1702,8 +1546,7 @@ Z80.prototype.instructions[0xcb] = function()
       this.flags.Y = ((bit_number === 5) && !this.flags.Z) ? 1 : 0;
       this.flags.X = ((bit_number === 3) && !this.flags.Z) ? 1 : 0;
    }
-   else if (opcode < 0xc0)
-   {
+   else if (opcode < 0xc0) {
       // RES instructions
       if (reg_code === 0)
          this.b &= (0xff & ~(1 << bit_number));
@@ -1723,8 +1566,7 @@ Z80.prototype.instructions[0xcb] = function()
       else if (reg_code === 7)
          this.a &= (0xff & ~(1 << bit_number));
    }
-   else
-   {
+   else {
       // SET instructions
       if (reg_code === 0)
          this.b |= (1 << bit_number);
@@ -1748,82 +1590,68 @@ Z80.prototype.instructions[0xcb] = function()
    this.cycle_counter += this.cycle_counts_cb[opcode];
 };
 // 0xcc : CALL Z, nn
-Z80.prototype.instructions[0xcc] = function()
-{
+Z80.prototype.instructions[0xcc] = function() {
    this.do_conditional_call(!!this.flags.Z);
 };
 // 0xcd : CALL nn
-Z80.prototype.instructions[0xcd] = function()
-{
+Z80.prototype.instructions[0xcd] = function() {
    this.push_word((this.pc + 3) & 0xffff);
    this.pc =  this.core.mem_read((this.pc + 1) & 0xffff) |
             (this.core.mem_read((this.pc + 2) & 0xffff) << 8);
    this.pc = (this.pc - 1) & 0xffff;
 };
 // 0xce : ADC A, n
-Z80.prototype.instructions[0xce] = function()
-{
+Z80.prototype.instructions[0xce] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.do_adc(this.core.mem_read(this.pc));
 };
 // 0xcf : RST 08h
-Z80.prototype.instructions[0xcf] = function()
-{
+Z80.prototype.instructions[0xcf] = function() {
    this.do_reset(0x08);
 };
 // 0xd0 : RET NC
-Z80.prototype.instructions[0xd0] = function()
-{
+Z80.prototype.instructions[0xd0] = function() {
    this.do_conditional_return(!this.flags.C);
 };
 // 0xd1 : POP DE
-Z80.prototype.instructions[0xd1] = function()
-{
-   var result = this.pop_word();
+Z80.prototype.instructions[0xd1] = function() {
+   let result = this.pop_word();
    this.e = result & 0xff;
    this.d = (result & 0xff00) >>> 8;
 };
 // 0xd2 : JP NC, nn
-Z80.prototype.instructions[0xd2] = function()
-{
+Z80.prototype.instructions[0xd2] = function() {
    this.do_conditional_absolute_jump(!this.flags.C);
 };
 // 0xd3 : OUT (n), A
-Z80.prototype.instructions[0xd3] = function()
-{
+Z80.prototype.instructions[0xd3] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.core.io_write((this.a << 8) | this.core.mem_read(this.pc), this.a);
 };
 // 0xd4 : CALL NC, nn
-Z80.prototype.instructions[0xd4] = function()
-{
+Z80.prototype.instructions[0xd4] = function() {
    this.do_conditional_call(!this.flags.C);
 };
 // 0xd5 : PUSH DE
-Z80.prototype.instructions[0xd5] = function()
-{
+Z80.prototype.instructions[0xd5] = function() {
    this.push_word(this.e | (this.d << 8));
 };
 // 0xd6 : SUB n
-Z80.prototype.instructions[0xd6] = function()
-{
+Z80.prototype.instructions[0xd6] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.do_sub(this.core.mem_read(this.pc));
 };
 // 0xd7 : RST 10h
-Z80.prototype.instructions[0xd7] = function()
-{
+Z80.prototype.instructions[0xd7] = function() {
    this.do_reset(0x10);
 };
 // 0xd8 : RET C
-Z80.prototype.instructions[0xd8] = function()
-{
+Z80.prototype.instructions[0xd8] = function() {
    this.do_conditional_return(!!this.flags.C);
 };
 // 0xd9 : EXX
-Z80.prototype.instructions[0xd9] = function()
-{
-   var temp = this.b;
+Z80.prototype.instructions[0xd9] = function() {
+   let temp = this.b;
    this.b = this.b_prime;
    this.b_prime = temp;
    temp = this.c;
@@ -1843,24 +1671,20 @@ Z80.prototype.instructions[0xd9] = function()
    this.l_prime = temp;
 };
 // 0xda : JP C, nn
-Z80.prototype.instructions[0xda] = function()
-{
+Z80.prototype.instructions[0xda] = function() {
    this.do_conditional_absolute_jump(!!this.flags.C);
 };
 // 0xdb : IN A, (n)
-Z80.prototype.instructions[0xdb] = function()
-{
+Z80.prototype.instructions[0xdb] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.a = this.core.io_read((this.a << 8) | this.core.mem_read(this.pc));
 };
 // 0xdc : CALL C, nn
-Z80.prototype.instructions[0xdc] = function()
-{
+Z80.prototype.instructions[0xdc] = function() {
    this.do_conditional_call(!!this.flags.C);
 };
 // 0xdd : DD Prefix (IX instructions)
-Z80.prototype.instructions[0xdd] = function()
-{
+Z80.prototype.instructions[0xdd] = function() {
    // R is incremented at the start of the second instruction cycle,
    //  before the instruction actually runs.
    // The high bit of R is not affected by this increment,
@@ -1868,17 +1692,15 @@ Z80.prototype.instructions[0xdd] = function()
    this.r = (this.r & 0x80) | (((this.r & 0x7f) + 1) & 0x7f);
 
    this.pc = (this.pc + 1) & 0xffff;
-   var opcode = this.core.mem_read(this.pc),
+   let opcode = this.core.mem_read(this.pc),
        func = this.dd_instructions[opcode];
 
-   if (func)
-   {
+   if (func) {
       func = func.bind(this);
       func();
       this.cycle_counter += this.cycle_counts_dd[opcode];
    }
-   else
-   {
+   else {
       // Apparently if a DD opcode doesn't exist,
       //  it gets treated as an unprefixed opcode.
       // What we'll do to handle that is just back up the
@@ -1890,37 +1712,31 @@ Z80.prototype.instructions[0xdd] = function()
    }
 };
 // 0xde : SBC n
-Z80.prototype.instructions[0xde] = function()
-{
+Z80.prototype.instructions[0xde] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.do_sbc(this.core.mem_read(this.pc));
 };
 // 0xdf : RST 18h
-Z80.prototype.instructions[0xdf] = function()
-{
+Z80.prototype.instructions[0xdf] = function() {
    this.do_reset(0x18);
 };
 // 0xe0 : RET PO
-Z80.prototype.instructions[0xe0] = function()
-{
+Z80.prototype.instructions[0xe0] = function() {
    this.do_conditional_return(!this.flags.P);
 };
 // 0xe1 : POP HL
-Z80.prototype.instructions[0xe1] = function()
-{
-   var result = this.pop_word();
+Z80.prototype.instructions[0xe1] = function() {
+   let result = this.pop_word();
    this.l = result & 0xff;
    this.h = (result & 0xff00) >>> 8;
 };
 // 0xe2 : JP PO, (nn)
-Z80.prototype.instructions[0xe2] = function()
-{
+Z80.prototype.instructions[0xe2] = function() {
    this.do_conditional_absolute_jump(!this.flags.P);
 };
 // 0xe3 : EX (SP), HL
-Z80.prototype.instructions[0xe3] = function()
-{
-   var temp = this.core.mem_read(this.sp);
+Z80.prototype.instructions[0xe3] = function() {
+   let temp = this.core.mem_read(this.sp);
    this.core.mem_write(this.sp, this.l);
    this.l = temp;
    temp = this.core.mem_read((this.sp + 1) & 0xffff);
@@ -1928,46 +1744,38 @@ Z80.prototype.instructions[0xe3] = function()
    this.h = temp;
 };
 // 0xe4 : CALL PO, nn
-Z80.prototype.instructions[0xe4] = function()
-{
+Z80.prototype.instructions[0xe4] = function() {
    this.do_conditional_call(!this.flags.P);
 };
 // 0xe5 : PUSH HL
-Z80.prototype.instructions[0xe5] = function()
-{
+Z80.prototype.instructions[0xe5] = function() {
    this.push_word(this.l | (this.h << 8));
 };
 // 0xe6 : AND n
-Z80.prototype.instructions[0xe6] = function()
-{
+Z80.prototype.instructions[0xe6] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.do_and(this.core.mem_read(this.pc));
 };
 // 0xe7 : RST 20h
-Z80.prototype.instructions[0xe7] = function()
-{
+Z80.prototype.instructions[0xe7] = function() {
    this.do_reset(0x20);
 };
 // 0xe8 : RET PE
-Z80.prototype.instructions[0xe8] = function()
-{
+Z80.prototype.instructions[0xe8] = function() {
    this.do_conditional_return(!!this.flags.P);
 };
 // 0xe9 : JP (HL)
-Z80.prototype.instructions[0xe9] = function()
-{
+Z80.prototype.instructions[0xe9] = function() {
    this.pc = this.l | (this.h << 8);
    this.pc = (this.pc - 1) & 0xffff;
 };
 // 0xea : JP PE, nn
-Z80.prototype.instructions[0xea] = function()
-{
+Z80.prototype.instructions[0xea] = function() {
    this.do_conditional_absolute_jump(!!this.flags.P);
 };
 // 0xeb : EX DE, HL
-Z80.prototype.instructions[0xeb] = function()
-{
-   var temp = this.d;
+Z80.prototype.instructions[0xeb] = function() {
+   let temp = this.d;
    this.d = this.h;
    this.h = temp;
    temp = this.e;
@@ -1975,13 +1783,11 @@ Z80.prototype.instructions[0xeb] = function()
    this.l = temp;
 };
 // 0xec : CALL PE, nn
-Z80.prototype.instructions[0xec] = function()
-{
+Z80.prototype.instructions[0xec] = function() {
    this.do_conditional_call(!!this.flags.P);
 };
 // 0xed : ED Prefix
-Z80.prototype.instructions[0xed] = function()
-{
+Z80.prototype.instructions[0xed] = function() {
    // R is incremented at the start of the second instruction cycle,
    //  before the instruction actually runs.
    // The high bit of R is not affected by this increment,
@@ -1989,105 +1795,87 @@ Z80.prototype.instructions[0xed] = function()
    this.r = (this.r & 0x80) | (((this.r & 0x7f) + 1) & 0x7f);
 
    this.pc = (this.pc + 1) & 0xffff;
-   var opcode = this.core.mem_read(this.pc),
+   let opcode = this.core.mem_read(this.pc),
        func = this.ed_instructions[opcode];
 
-   if (func)
-   {
+   if (func) {
       func = func.bind(this);
       func();
       this.cycle_counter += this.cycle_counts_ed[opcode];
    }
-   else
-   {
+   else {
       // If the opcode didn't exist, the whole thing is a two-byte NOP.
       this.cycle_counter += this.cycle_counts[0];
    }
 };
 // 0xee : XOR n
-Z80.prototype.instructions[0xee] = function()
-{
+Z80.prototype.instructions[0xee] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.do_xor(this.core.mem_read(this.pc));
 };
 // 0xef : RST 28h
-Z80.prototype.instructions[0xef] = function()
-{
+Z80.prototype.instructions[0xef] = function() {
    this.do_reset(0x28);
 };
 // 0xf0 : RET P
-Z80.prototype.instructions[0xf0] = function()
-{
+Z80.prototype.instructions[0xf0] = function() {
    this.do_conditional_return(!this.flags.S);
 };
 // 0xf1 : POP AF
-Z80.prototype.instructions[0xf1] = function()
-{
-   var result = this.pop_word();
+Z80.prototype.instructions[0xf1] = function() {
+   let result = this.pop_word();
    this.set_flags_register(result & 0xff);
    this.a = (result & 0xff00) >>> 8;
 };
 // 0xf2 : JP P, nn
-Z80.prototype.instructions[0xf2] = function()
-{
+Z80.prototype.instructions[0xf2] = function() {
    this.do_conditional_absolute_jump(!this.flags.S);
 };
 // 0xf3 : DI
-Z80.prototype.instructions[0xf3] = function()
-{
+Z80.prototype.instructions[0xf3] = function() {
    // DI doesn't actually take effect until after the next instruction.
    this.do_delayed_di = true;
 };
 // 0xf4 : CALL P, nn
-Z80.prototype.instructions[0xf4] = function()
-{
+Z80.prototype.instructions[0xf4] = function() {
    this.do_conditional_call(!this.flags.S);
 };
 // 0xf5 : PUSH AF
-Z80.prototype.instructions[0xf5] = function()
-{
+Z80.prototype.instructions[0xf5] = function() {
    this.push_word(this.get_flags_register() | (this.a << 8));
 };
 // 0xf6 : OR n
-Z80.prototype.instructions[0xf6] = function()
-{
+Z80.prototype.instructions[0xf6] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.do_or(this.core.mem_read(this.pc));
 };
 // 0xf7 : RST 30h
-Z80.prototype.instructions[0xf7] = function()
-{
+Z80.prototype.instructions[0xf7] = function() {
    this.do_reset(0x30);
 };
 // 0xf8 : RET M
-Z80.prototype.instructions[0xf8] = function()
-{
+Z80.prototype.instructions[0xf8] = function() {
    this.do_conditional_return(!!this.flags.S);
 };
 // 0xf9 : LD SP, HL
-Z80.prototype.instructions[0xf9] = function()
-{
+Z80.prototype.instructions[0xf9] = function() {
    this.sp = this.l | (this.h << 8);
 };
 // 0xfa : JP M, nn
-Z80.prototype.instructions[0xfa] = function()
-{
+Z80.prototype.instructions[0xfa] = function() {
    this.do_conditional_absolute_jump(!!this.flags.S);
 };
 // 0xfb : EI
-Z80.prototype.instructions[0xfb] = function()
-{
+Z80.prototype.instructions[0xfb] = function() {
    // EI doesn't actually take effect until after the next instruction.
    this.do_delayed_ei = true;
 };
 // 0xfc : CALL M, nn
-Z80.prototype.instructions[0xfc] = function()
-{
+Z80.prototype.instructions[0xfc] = function() {
    this.do_conditional_call(!!this.flags.S);
 };
 // 0xfd : FD Prefix (IY instructions)
-Z80.prototype.instructions[0xfd] = function()
-{
+Z80.prototype.instructions[0xfd] = function() {
    // R is incremented at the start of the second instruction cycle,
    //  before the instruction actually runs.
    // The high bit of R is not affected by this increment,
@@ -2095,15 +1883,14 @@ Z80.prototype.instructions[0xfd] = function()
    this.r = (this.r & 0x80) | (((this.r & 0x7f) + 1) & 0x7f);
 
    this.pc = (this.pc + 1) & 0xffff;
-   var opcode = this.core.mem_read(this.pc),
+   let opcode = this.core.mem_read(this.pc),
        func = this.dd_instructions[opcode];
 
-   if (func)
-   {
+   if (func) {
       // Rather than copy and paste all the IX instructions into IY instructions,
       //  what we'll do is sneakily copy IY into IX, run the IX instruction,
       //  and then copy the result into IY and restore the old IX.
-      var temp = this.ix;
+      let temp = this.ix;
       this.ix = this.iy;
       func = func.bind(this);
       func();
@@ -2112,8 +1899,7 @@ Z80.prototype.instructions[0xfd] = function()
 
       this.cycle_counter += this.cycle_counts_dd[opcode];
    }
-   else
-   {
+   else {
       // Apparently if an FD opcode doesn't exist,
       //  it gets treated as an unprefixed opcode.
       // What we'll do to handle that is just back up the
@@ -2125,14 +1911,12 @@ Z80.prototype.instructions[0xfd] = function()
    }
 };
 // 0xfe : CP n
-Z80.prototype.instructions[0xfe] = function()
-{
+Z80.prototype.instructions[0xfe] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.do_cp(this.core.mem_read(this.pc));
 };
 // 0xff : RST 38h
-Z80.prototype.instructions[0xff] = function()
-{
+Z80.prototype.instructions[0xff] = function() {
    this.do_reset(0x38);
 };
 
@@ -2144,25 +1928,21 @@ Z80.prototype.instructions[0xff] = function()
 ///////////////////////////////////////////////////////////////////////////////
 Z80.prototype.ed_instructions = [];
 // 0x40 : IN B, (C)
-Z80.prototype.ed_instructions[0x40] = function()
-{
+Z80.prototype.ed_instructions[0x40] = function() {
    this.b = this.do_in((this.b << 8) | this.c);
 };
 // 0x41 : OUT (C), B
-Z80.prototype.ed_instructions[0x41] = function()
-{
+Z80.prototype.ed_instructions[0x41] = function() {
    this.core.io_write((this.b << 8) | this.c, this.b);
 };
 // 0x42 : SBC HL, BC
-Z80.prototype.ed_instructions[0x42] = function()
-{
+Z80.prototype.ed_instructions[0x42] = function() {
    this.do_hl_sbc(this.c | (this.b << 8));
 };
 // 0x43 : LD (nn), BC
-Z80.prototype.ed_instructions[0x43] = function()
-{
+Z80.prototype.ed_instructions[0x43] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var address = this.core.mem_read(this.pc);
+   let address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
 
@@ -2170,46 +1950,38 @@ Z80.prototype.ed_instructions[0x43] = function()
    this.core.mem_write((address + 1) & 0xffff, this.b);
 };
 // 0x44 : NEG
-Z80.prototype.ed_instructions[0x44] = function()
-{
+Z80.prototype.ed_instructions[0x44] = function() {
    this.do_neg();
 };
 // 0x45 : RETN
-Z80.prototype.ed_instructions[0x45] = function()
-{
+Z80.prototype.ed_instructions[0x45] = function() {
    this.pc = (this.pop_word() - 1) & 0xffff;
    this.iff1 = this.iff2;
 };
 // 0x46 : IM 0
-Z80.prototype.ed_instructions[0x46] = function()
-{
+Z80.prototype.ed_instructions[0x46] = function() {
    this.imode = 0;
 };
 // 0x47 : LD I, A
-Z80.prototype.ed_instructions[0x47] = function()
-{
-   this.i = this.a
+Z80.prototype.ed_instructions[0x47] = function() {
+   this.i = this.a;
 };
 // 0x48 : IN C, (C)
-Z80.prototype.ed_instructions[0x48] = function()
-{
+Z80.prototype.ed_instructions[0x48] = function() {
    this.c = this.do_in((this.b << 8) | this.c);
 };
 // 0x49 : OUT (C), C
-Z80.prototype.ed_instructions[0x49] = function()
-{
+Z80.prototype.ed_instructions[0x49] = function() {
    this.core.io_write((this.b << 8) | this.c, this.c);
 };
 // 0x4a : ADC HL, BC
-Z80.prototype.ed_instructions[0x4a] = function()
-{
+Z80.prototype.ed_instructions[0x4a] = function() {
    this.do_hl_adc(this.c | (this.b << 8));
 };
 // 0x4b : LD BC, (nn)
-Z80.prototype.ed_instructions[0x4b] = function()
-{
+Z80.prototype.ed_instructions[0x4b] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var address = this.core.mem_read(this.pc);
+   let address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
 
@@ -2217,45 +1989,37 @@ Z80.prototype.ed_instructions[0x4b] = function()
    this.b = this.core.mem_read((address + 1) & 0xffff);
 };
 // 0x4c : NEG (Undocumented)
-Z80.prototype.ed_instructions[0x4c] = function()
-{
+Z80.prototype.ed_instructions[0x4c] = function() {
    this.do_neg();
 };
 // 0x4d : RETI
-Z80.prototype.ed_instructions[0x4d] = function()
-{
+Z80.prototype.ed_instructions[0x4d] = function() {
    this.pc = (this.pop_word() - 1) & 0xffff;
 };
 // 0x4e : IM 0 (Undocumented)
-Z80.prototype.ed_instructions[0x4e] = function()
-{
+Z80.prototype.ed_instructions[0x4e] = function() {
    this.imode = 0;
 };
 // 0x4f : LD R, A
-Z80.prototype.ed_instructions[0x4f] = function()
-{
+Z80.prototype.ed_instructions[0x4f] = function() {
    this.r = this.a;
 };
 // 0x50 : IN D, (C)
-Z80.prototype.ed_instructions[0x50] = function()
-{
+Z80.prototype.ed_instructions[0x50] = function() {
    this.d = this.do_in((this.b << 8) | this.c);
 };
 // 0x51 : OUT (C), D
-Z80.prototype.ed_instructions[0x51] = function()
-{
+Z80.prototype.ed_instructions[0x51] = function() {
    this.core.io_write((this.b << 8) | this.c, this.d);
 };
 // 0x52 : SBC HL, DE
-Z80.prototype.ed_instructions[0x52] = function()
-{
+Z80.prototype.ed_instructions[0x52] = function() {
    this.do_hl_sbc(this.e | (this.d << 8));
 };
 // 0x53 : LD (nn), DE
-Z80.prototype.ed_instructions[0x53] = function()
-{
+Z80.prototype.ed_instructions[0x53] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var address = this.core.mem_read(this.pc);
+   let address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
 
@@ -2263,47 +2027,39 @@ Z80.prototype.ed_instructions[0x53] = function()
    this.core.mem_write((address + 1) & 0xffff, this.d);
 };
 // 0x54 : NEG (Undocumented)
-Z80.prototype.ed_instructions[0x54] = function()
-{
+Z80.prototype.ed_instructions[0x54] = function() {
    this.do_neg();
 };
 // 0x55 : RETN
-Z80.prototype.ed_instructions[0x55] = function()
-{
+Z80.prototype.ed_instructions[0x55] = function() {
    this.pc = (this.pop_word() - 1) & 0xffff;
    this.iff1 = this.iff2;
 };
 // 0x56 : IM 1
-Z80.prototype.ed_instructions[0x56] = function()
-{
+Z80.prototype.ed_instructions[0x56] = function() {
    this.imode = 1;
 };
 // 0x57 : LD A, I
-Z80.prototype.ed_instructions[0x57] = function()
-{
+Z80.prototype.ed_instructions[0x57] = function() {
    this.a = this.i;
    this.flags.P = this.iff2;
 };
 // 0x58 : IN E, (C)
-Z80.prototype.ed_instructions[0x58] = function()
-{
+Z80.prototype.ed_instructions[0x58] = function() {
    this.e = this.do_in((this.b << 8) | this.c);
 };
 // 0x59 : OUT (C), E
-Z80.prototype.ed_instructions[0x59] = function()
-{
+Z80.prototype.ed_instructions[0x59] = function() {
    this.core.io_write((this.b << 8) | this.c, this.e);
 };
 // 0x5a : ADC HL, DE
-Z80.prototype.ed_instructions[0x5a] = function()
-{
+Z80.prototype.ed_instructions[0x5a] = function() {
    this.do_hl_adc(this.e | (this.d << 8));
 };
 // 0x5b : LD DE, (nn)
-Z80.prototype.ed_instructions[0x5b] = function()
-{
+Z80.prototype.ed_instructions[0x5b] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var address = this.core.mem_read(this.pc);
+   let address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
 
@@ -2311,47 +2067,39 @@ Z80.prototype.ed_instructions[0x5b] = function()
    this.d = this.core.mem_read((address + 1) & 0xffff);
 };
 // 0x5c : NEG (Undocumented)
-Z80.prototype.ed_instructions[0x5c] = function()
-{
+Z80.prototype.ed_instructions[0x5c] = function() {
    this.do_neg();
 };
 // 0x5d : RETN
-Z80.prototype.ed_instructions[0x5d] = function()
-{
+Z80.prototype.ed_instructions[0x5d] = function() {
    this.pc = (this.pop_word() - 1) & 0xffff;
    this.iff1 = this.iff2;
 };
 // 0x5e : IM 2
-Z80.prototype.ed_instructions[0x5e] = function()
-{
+Z80.prototype.ed_instructions[0x5e] = function() {
    this.imode = 2;
 };
 // 0x5f : LD A, R
-Z80.prototype.ed_instructions[0x5f] = function()
-{
+Z80.prototype.ed_instructions[0x5f] = function() {
    this.a = this.r;
    this.flags.P = this.iff2;
 };
 // 0x60 : IN H, (C)
-Z80.prototype.ed_instructions[0x60] = function()
-{
+Z80.prototype.ed_instructions[0x60] = function() {
    this.h = this.do_in((this.b << 8) | this.c);
 };
 // 0x61 : OUT (C), H
-Z80.prototype.ed_instructions[0x61] = function()
-{
+Z80.prototype.ed_instructions[0x61] = function() {
    this.core.io_write((this.b << 8) | this.c, this.h);
 };
 // 0x62 : SBC HL, HL
-Z80.prototype.ed_instructions[0x62] = function()
-{
+Z80.prototype.ed_instructions[0x62] = function() {
    this.do_hl_sbc(this.l | (this.h << 8));
 };
 // 0x63 : LD (nn), HL (Undocumented)
-Z80.prototype.ed_instructions[0x63] = function()
-{
+Z80.prototype.ed_instructions[0x63] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var address = this.core.mem_read(this.pc);
+   let address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
 
@@ -2359,26 +2107,22 @@ Z80.prototype.ed_instructions[0x63] = function()
    this.core.mem_write((address + 1) & 0xffff, this.h);
 };
 // 0x64 : NEG (Undocumented)
-Z80.prototype.ed_instructions[0x64] = function()
-{
+Z80.prototype.ed_instructions[0x64] = function() {
    this.do_neg();
 };
 // 0x65 : RETN
-Z80.prototype.ed_instructions[0x65] = function()
-{
+Z80.prototype.ed_instructions[0x65] = function() {
    this.pc = (this.pop_word() - 1) & 0xffff;
    this.iff1 = this.iff2;
 };
 // 0x66 : IM 0
-Z80.prototype.ed_instructions[0x66] = function()
-{
+Z80.prototype.ed_instructions[0x66] = function() {
    this.imode = 0;
 };
 // 0x67 : RRD
-Z80.prototype.ed_instructions[0x67] = function()
-{
-   var hl_value = this.core.mem_read(this.l | (this.h << 8));
-   var temp1 = hl_value & 0x0f, temp2 = this.a & 0x0f;
+Z80.prototype.ed_instructions[0x67] = function() {
+   let hl_value = this.core.mem_read(this.l | (this.h << 8));
+   let temp1 = hl_value & 0x0f, temp2 = this.a & 0x0f;
    hl_value = ((hl_value & 0xf0) >>> 4) | (temp2 << 4);
    this.a = (this.a & 0xf0) | temp1;
    this.core.mem_write(this.l | (this.h << 8), hl_value);
@@ -2391,25 +2135,21 @@ Z80.prototype.ed_instructions[0x67] = function()
    this.update_xy_flags(this.a);
 };
 // 0x68 : IN L, (C)
-Z80.prototype.ed_instructions[0x68] = function()
-{
+Z80.prototype.ed_instructions[0x68] = function() {
    this.l = this.do_in((this.b << 8) | this.c);
 };
 // 0x69 : OUT (C), L
-Z80.prototype.ed_instructions[0x69] = function()
-{
+Z80.prototype.ed_instructions[0x69] = function() {
    this.core.io_write((this.b << 8) | this.c, this.l);
 };
 // 0x6a : ADC HL, HL
-Z80.prototype.ed_instructions[0x6a] = function()
-{
+Z80.prototype.ed_instructions[0x6a] = function() {
    this.do_hl_adc(this.l | (this.h << 8));
 };
 // 0x6b : LD HL, (nn) (Undocumented)
-Z80.prototype.ed_instructions[0x6b] = function()
-{
+Z80.prototype.ed_instructions[0x6b] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var address = this.core.mem_read(this.pc);
+   let address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
 
@@ -2417,26 +2157,22 @@ Z80.prototype.ed_instructions[0x6b] = function()
    this.h = this.core.mem_read((address + 1) & 0xffff);
 };
 // 0x6c : NEG (Undocumented)
-Z80.prototype.ed_instructions[0x6c] = function()
-{
+Z80.prototype.ed_instructions[0x6c] = function() {
    this.do_neg();
 };
 // 0x6d : RETN
-Z80.prototype.ed_instructions[0x6d] = function()
-{
+Z80.prototype.ed_instructions[0x6d] = function() {
    this.pc = (this.pop_word() - 1) & 0xffff;
    this.iff1 = this.iff2;
 };
 // 0x6e : IM 0 (Undocumented)
-Z80.prototype.ed_instructions[0x6e] = function()
-{
+Z80.prototype.ed_instructions[0x6e] = function() {
    this.imode = 0;
 };
 // 0x6f : RLD
-Z80.prototype.ed_instructions[0x6f] = function()
-{
-   var hl_value = this.core.mem_read(this.l | (this.h << 8));
-   var temp1 = hl_value & 0xf0, temp2 = this.a & 0x0f;
+Z80.prototype.ed_instructions[0x6f] = function() {
+   let hl_value = this.core.mem_read(this.l | (this.h << 8));
+   let temp1 = hl_value & 0xf0, temp2 = this.a & 0x0f;
    hl_value = ((hl_value & 0x0f) << 4) | temp2;
    this.a = (this.a & 0xf0) | (temp1 >>> 4);
    this.core.mem_write(this.l | (this.h << 8), hl_value);
@@ -2449,25 +2185,21 @@ Z80.prototype.ed_instructions[0x6f] = function()
    this.update_xy_flags(this.a);
 };
 // 0x70 : IN (C) (Undocumented)
-Z80.prototype.ed_instructions[0x70] = function()
-{
+Z80.prototype.ed_instructions[0x70] = function() {
    this.do_in((this.b << 8) | this.c);
 };
 // 0x71 : OUT (C), 0 (Undocumented)
-Z80.prototype.ed_instructions[0x71] = function()
-{
+Z80.prototype.ed_instructions[0x71] = function() {
    this.core.io_write((this.b << 8) | this.c, 0);
 };
 // 0x72 : SBC HL, SP
-Z80.prototype.ed_instructions[0x72] = function()
-{
+Z80.prototype.ed_instructions[0x72] = function() {
    this.do_hl_sbc(this.sp);
 };
 // 0x73 : LD (nn), SP
-Z80.prototype.ed_instructions[0x73] = function()
-{
+Z80.prototype.ed_instructions[0x73] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var address = this.core.mem_read(this.pc);
+   let address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
 
@@ -2475,41 +2207,34 @@ Z80.prototype.ed_instructions[0x73] = function()
    this.core.mem_write((address + 1) & 0xffff, (this.sp >>> 8) & 0xff);
 };
 // 0x74 : NEG (Undocumented)
-Z80.prototype.ed_instructions[0x74] = function()
-{
+Z80.prototype.ed_instructions[0x74] = function() {
    this.do_neg();
 };
 // 0x75 : RETN
-Z80.prototype.ed_instructions[0x75] = function()
-{
+Z80.prototype.ed_instructions[0x75] = function() {
    this.pc = (this.pop_word() - 1) & 0xffff;
    this.iff1 = this.iff2;
 };
 // 0x76 : IM 1
-Z80.prototype.ed_instructions[0x76] = function()
-{
+Z80.prototype.ed_instructions[0x76] = function() {
    this.imode = 1;
 };
 // 0x78 : IN A, (C)
-Z80.prototype.ed_instructions[0x78] = function()
-{
+Z80.prototype.ed_instructions[0x78] = function() {
    this.a = this.do_in((this.b << 8) | this.c);
 };
 // 0x79 : OUT (C), A
-Z80.prototype.ed_instructions[0x79] = function()
-{
+Z80.prototype.ed_instructions[0x79] = function() {
    this.core.io_write((this.b << 8) | this.c, this.a);
 };
 // 0x7a : ADC HL, SP
-Z80.prototype.ed_instructions[0x7a] = function()
-{
+Z80.prototype.ed_instructions[0x7a] = function() {
    this.do_hl_adc(this.sp);
 };
 // 0x7b : LD SP, (nn)
-Z80.prototype.ed_instructions[0x7b] = function()
-{
+Z80.prototype.ed_instructions[0x7b] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var address = this.core.mem_read(this.pc);
+   let address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= this.core.mem_read(this.pc) << 8;
 
@@ -2517,137 +2242,110 @@ Z80.prototype.ed_instructions[0x7b] = function()
    this.sp |= this.core.mem_read((address + 1) & 0xffff) << 8;
 };
 // 0x7c : NEG (Undocumented)
-Z80.prototype.ed_instructions[0x7c] = function()
-{
+Z80.prototype.ed_instructions[0x7c] = function() {
    this.do_neg();
 };
 // 0x7d : RETN
-Z80.prototype.ed_instructions[0x7d] = function()
-{
+Z80.prototype.ed_instructions[0x7d] = function() {
    this.pc = (this.pop_word() - 1) & 0xffff;
    this.iff1 = this.iff2;
 };
 // 0x7e : IM 2
-Z80.prototype.ed_instructions[0x7e] = function()
-{
+Z80.prototype.ed_instructions[0x7e] = function() {
    this.imode = 2;
 };
 // 0xa0 : LDI
-Z80.prototype.ed_instructions[0xa0] = function()
-{
+Z80.prototype.ed_instructions[0xa0] = function() {
    this.do_ldi();
 };
 // 0xa1 : CPI
-Z80.prototype.ed_instructions[0xa1] = function()
-{
+Z80.prototype.ed_instructions[0xa1] = function() {
    this.do_cpi();
 };
 // 0xa2 : INI
-Z80.prototype.ed_instructions[0xa2] = function()
-{
+Z80.prototype.ed_instructions[0xa2] = function() {
    this.do_ini();
 };
 // 0xa3 : OUTI
-Z80.prototype.ed_instructions[0xa3] = function()
-{
+Z80.prototype.ed_instructions[0xa3] = function() {
    this.do_outi();
 };
 // 0xa8 : LDD
-Z80.prototype.ed_instructions[0xa8] = function()
-{
+Z80.prototype.ed_instructions[0xa8] = function() {
    this.do_ldd();
 };
 // 0xa9 : CPD
-Z80.prototype.ed_instructions[0xa9] = function()
-{
+Z80.prototype.ed_instructions[0xa9] = function() {
    this.do_cpd();
 };
 // 0xaa : IND
-Z80.prototype.ed_instructions[0xaa] = function()
-{
+Z80.prototype.ed_instructions[0xaa] = function() {
    this.do_ind();
 };
 // 0xab : OUTD
-Z80.prototype.ed_instructions[0xab] = function()
-{
+Z80.prototype.ed_instructions[0xab] = function() {
    this.do_outd();
 };
 // 0xb0 : LDIR
-Z80.prototype.ed_instructions[0xb0] = function()
-{
+Z80.prototype.ed_instructions[0xb0] = function() {
    this.do_ldi();
-   if (this.b || this.c)
-   {
+   if (this.b || this.c) {
       this.cycle_counter += 5;
       this.pc = (this.pc - 2) & 0xffff;
    }
 };
 // 0xb1 : CPIR
-Z80.prototype.ed_instructions[0xb1] = function()
-{
+Z80.prototype.ed_instructions[0xb1] = function() {
    this.do_cpi();
-   if (!this.flags.Z && (this.b || this.c))
-   {
+   if (!this.flags.Z && (this.b || this.c)) {
       this.cycle_counter += 5;
       this.pc = (this.pc - 2) & 0xffff;
    }
 };
 // 0xb2 : INIR
-Z80.prototype.ed_instructions[0xb2] = function()
-{
+Z80.prototype.ed_instructions[0xb2] = function() {
    this.do_ini();
-   if (this.b)
-   {
+   if (this.b) {
       this.cycle_counter += 5;
       this.pc = (this.pc - 2) & 0xffff;
    }
 };
 // 0xb3 : OTIR
-Z80.prototype.ed_instructions[0xb3] = function()
-{
+Z80.prototype.ed_instructions[0xb3] = function() {
    this.do_outi();
-   if (this.b)
-   {
+   if (this.b) {
       this.cycle_counter += 5;
       this.pc = (this.pc - 2) & 0xffff;
    }
 };
 // 0xb8 : LDDR
-Z80.prototype.ed_instructions[0xb8] = function()
-{
+Z80.prototype.ed_instructions[0xb8] = function() {
    this.do_ldd();
-   if (this.b || this.c)
-   {
+   if (this.b || this.c) {
       this.cycle_counter += 5;
       this.pc = (this.pc - 2) & 0xffff;
    }
 };
 // 0xb9 : CPDR
-Z80.prototype.ed_instructions[0xb9] = function()
-{
+Z80.prototype.ed_instructions[0xb9] = function() {
    this.do_cpd();
-   if (!this.flags.Z && (this.b || this.c))
-   {
+   if (!this.flags.Z && (this.b || this.c)) {
       this.cycle_counter += 5;
       this.pc = (this.pc - 2) & 0xffff;
    }
 };
 // 0xba : INDR
-Z80.prototype.ed_instructions[0xba] = function()
-{
+Z80.prototype.ed_instructions[0xba] = function() {
    this.do_ind();
-   if (this.b)
-   {
+   if (this.b) {
       this.cycle_counter += 5;
       this.pc = (this.pc - 2) & 0xffff;
    }
 };
 // 0xbb : OTDR
-Z80.prototype.ed_instructions[0xbb] = function()
-{
+Z80.prototype.ed_instructions[0xbb] = function() {
    this.do_outd();
-   if (this.b)
-   {
+   if (this.b) {
       this.cycle_counter += 5;
       this.pc = (this.pc - 2) & 0xffff;
    }
@@ -2662,28 +2360,24 @@ Z80.prototype.ed_instructions[0xbb] = function()
 ///////////////////////////////////////////////////////////////////////////////
 Z80.prototype.dd_instructions = [];
 // 0x09 : ADD IX, BC
-Z80.prototype.dd_instructions[0x09] = function()
-{
+Z80.prototype.dd_instructions[0x09] = function() {
    this.do_ix_add(this.c | (this.b << 8));
 };
 // 0x19 : ADD IX, DE
-Z80.prototype.dd_instructions[0x19] = function()
-{
+Z80.prototype.dd_instructions[0x19] = function() {
    this.do_ix_add(this.e | (this.d << 8));
 };
 // 0x21 : LD IX, nn
-Z80.prototype.dd_instructions[0x21] = function()
-{
+Z80.prototype.dd_instructions[0x21] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.ix = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    this.ix |= (this.core.mem_read(this.pc) << 8);
 };
 // 0x22 : LD (nn), IX
-Z80.prototype.dd_instructions[0x22] = function()
-{
+Z80.prototype.dd_instructions[0x22] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var address = this.core.mem_read(this.pc);
+   let address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= (this.core.mem_read(this.pc) << 8);
 
@@ -2691,36 +2385,30 @@ Z80.prototype.dd_instructions[0x22] = function()
    this.core.mem_write((address + 1) & 0xffff, (this.ix >>> 8) & 0xff);
 };
 // 0x23 : INC IX
-Z80.prototype.dd_instructions[0x23] = function()
-{
+Z80.prototype.dd_instructions[0x23] = function() {
    this.ix = (this.ix + 1) & 0xffff;
 };
 // 0x24 : INC IXH (Undocumented)
-Z80.prototype.dd_instructions[0x24] = function()
-{
+Z80.prototype.dd_instructions[0x24] = function() {
    this.ix = (this.do_inc(this.ix >>> 8) << 8) | (this.ix & 0xff);
 };
 // 0x25 : DEC IXH (Undocumented)
-Z80.prototype.dd_instructions[0x25] = function()
-{
+Z80.prototype.dd_instructions[0x25] = function() {
    this.ix = (this.do_dec(this.ix >>> 8) << 8) | (this.ix & 0xff);
 };
 // 0x26 : LD IXH, n (Undocumented)
-Z80.prototype.dd_instructions[0x26] = function()
-{
+Z80.prototype.dd_instructions[0x26] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.ix = (this.core.mem_read(this.pc) << 8) | (this.ix & 0xff);
 };
 // 0x29 : ADD IX, IX
-Z80.prototype.dd_instructions[0x29] = function()
-{
+Z80.prototype.dd_instructions[0x29] = function() {
    this.do_ix_add(this.ix);
 };
 // 0x2a : LD IX, (nn)
-Z80.prototype.dd_instructions[0x2a] = function()
-{
+Z80.prototype.dd_instructions[0x2a] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var address = this.core.mem_read(this.pc);
+   let address = this.core.mem_read(this.pc);
    this.pc = (this.pc + 1) & 0xffff;
    address |= (this.core.mem_read(this.pc) << 8);
 
@@ -2728,438 +2416,364 @@ Z80.prototype.dd_instructions[0x2a] = function()
    this.ix |= (this.core.mem_read((address + 1) & 0xffff) << 8);
 };
 // 0x2b : DEC IX
-Z80.prototype.dd_instructions[0x2b] = function()
-{
+Z80.prototype.dd_instructions[0x2b] = function() {
    this.ix = (this.ix - 1) & 0xffff;
 };
 // 0x2c : INC IXL (Undocumented)
-Z80.prototype.dd_instructions[0x2c] = function()
-{
+Z80.prototype.dd_instructions[0x2c] = function() {
    this.ix = this.do_inc(this.ix & 0xff) | (this.ix & 0xff00);
 };
 // 0x2d : DEC IXL (Undocumented)
-Z80.prototype.dd_instructions[0x2d] = function()
-{
+Z80.prototype.dd_instructions[0x2d] = function() {
    this.ix = this.do_dec(this.ix & 0xff) | (this.ix & 0xff00);
 };
 // 0x2e : LD IXL, n (Undocumented)
-Z80.prototype.dd_instructions[0x2e] = function()
-{
+Z80.prototype.dd_instructions[0x2e] = function() {
    this.pc = (this.pc + 1) & 0xffff;
    this.ix = (this.core.mem_read(this.pc) & 0xff) | (this.ix & 0xff00);
 };
 // 0x34 : INC (IX+n)
-Z80.prototype.dd_instructions[0x34] = function()
-{
+Z80.prototype.dd_instructions[0x34] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc)),
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc)),
        value = this.core.mem_read((offset + this.ix) & 0xffff);
    this.core.mem_write((offset + this.ix) & 0xffff, this.do_inc(value));
 };
 // 0x35 : DEC (IX+n)
-Z80.prototype.dd_instructions[0x35] = function()
-{
+Z80.prototype.dd_instructions[0x35] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc)),
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc)),
        value = this.core.mem_read((offset + this.ix) & 0xffff);
    this.core.mem_write((offset + this.ix) & 0xffff, this.do_dec(value));
 };
 // 0x36 : LD (IX+n), n
-Z80.prototype.dd_instructions[0x36] = function()
-{
+Z80.prototype.dd_instructions[0x36] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.pc = (this.pc + 1) & 0xffff;
    this.core.mem_write((this.ix + offset) & 0xffff, this.core.mem_read(this.pc));
 };
 // 0x39 : ADD IX, SP
-Z80.prototype.dd_instructions[0x39] = function()
-{
+Z80.prototype.dd_instructions[0x39] = function() {
    this.do_ix_add(this.sp);
 };
 // 0x44 : LD B, IXH (Undocumented)
-Z80.prototype.dd_instructions[0x44] = function()
-{
+Z80.prototype.dd_instructions[0x44] = function() {
    this.b = (this.ix >>> 8) & 0xff;
 };
 // 0x45 : LD B, IXL (Undocumented)
-Z80.prototype.dd_instructions[0x45] = function()
-{
+Z80.prototype.dd_instructions[0x45] = function() {
    this.b = this.ix & 0xff;
 };
 // 0x46 : LD B, (IX+n)
-Z80.prototype.dd_instructions[0x46] = function()
-{
+Z80.prototype.dd_instructions[0x46] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.b = this.core.mem_read((this.ix + offset) & 0xffff);
 };
 // 0x4c : LD C, IXH (Undocumented)
-Z80.prototype.dd_instructions[0x4c] = function()
-{
+Z80.prototype.dd_instructions[0x4c] = function() {
    this.c = (this.ix >>> 8) & 0xff;
 };
 // 0x4d : LD C, IXL (Undocumented)
-Z80.prototype.dd_instructions[0x4d] = function()
-{
+Z80.prototype.dd_instructions[0x4d] = function() {
    this.c = this.ix & 0xff;
 };
 // 0x4e : LD C, (IX+n)
-Z80.prototype.dd_instructions[0x4e] = function()
-{
+Z80.prototype.dd_instructions[0x4e] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.c = this.core.mem_read((this.ix + offset) & 0xffff);
 };
 // 0x54 : LD D, IXH (Undocumented)
-Z80.prototype.dd_instructions[0x54] = function()
-{
+Z80.prototype.dd_instructions[0x54] = function() {
    this.d = (this.ix >>> 8) & 0xff;
 };
 // 0x55 : LD D, IXL (Undocumented)
-Z80.prototype.dd_instructions[0x55] = function()
-{
+Z80.prototype.dd_instructions[0x55] = function() {
    this.d = this.ix & 0xff;
 };
 // 0x56 : LD D, (IX+n)
-Z80.prototype.dd_instructions[0x56] = function()
-{
+Z80.prototype.dd_instructions[0x56] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.d = this.core.mem_read((this.ix + offset) & 0xffff);
 };
 // 0x5c : LD E, IXH (Undocumented)
-Z80.prototype.dd_instructions[0x5c] = function()
-{
+Z80.prototype.dd_instructions[0x5c] = function() {
    this.e = (this.ix >>> 8) & 0xff;
 };
 // 0x5d : LD E, IXL (Undocumented)
-Z80.prototype.dd_instructions[0x5d] = function()
-{
+Z80.prototype.dd_instructions[0x5d] = function() {
    this.e = this.ix & 0xff;
 };
 // 0x5e : LD E, (IX+n)
-Z80.prototype.dd_instructions[0x5e] = function()
-{
+Z80.prototype.dd_instructions[0x5e] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.e = this.core.mem_read((this.ix + offset) & 0xffff);
 };
 // 0x60 : LD IXH, B (Undocumented)
-Z80.prototype.dd_instructions[0x60] = function()
-{
+Z80.prototype.dd_instructions[0x60] = function() {
    this.ix = (this.ix & 0xff) | (this.b << 8);
 };
 // 0x61 : LD IXH, C (Undocumented)
-Z80.prototype.dd_instructions[0x61] = function()
-{
+Z80.prototype.dd_instructions[0x61] = function() {
    this.ix = (this.ix & 0xff) | (this.c << 8);
 };
 // 0x62 : LD IXH, D (Undocumented)
-Z80.prototype.dd_instructions[0x62] = function()
-{
+Z80.prototype.dd_instructions[0x62] = function() {
    this.ix = (this.ix & 0xff) | (this.d << 8);
 };
 // 0x63 : LD IXH, E (Undocumented)
-Z80.prototype.dd_instructions[0x63] = function()
-{
+Z80.prototype.dd_instructions[0x63] = function() {
    this.ix = (this.ix & 0xff) | (this.e << 8);
 };
 // 0x64 : LD IXH, IXH (Undocumented)
-Z80.prototype.dd_instructions[0x64] = function()
-{
+Z80.prototype.dd_instructions[0x64] = function() {
    // No-op.
 };
 // 0x65 : LD IXH, IXL (Undocumented)
-Z80.prototype.dd_instructions[0x65] = function()
-{
+Z80.prototype.dd_instructions[0x65] = function() {
    this.ix = (this.ix & 0xff) | ((this.ix & 0xff) << 8);
 };
 // 0x66 : LD H, (IX+n)
-Z80.prototype.dd_instructions[0x66] = function()
-{
+Z80.prototype.dd_instructions[0x66] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.h = this.core.mem_read((this.ix + offset) & 0xffff);
 };
 // 0x67 : LD IXH, A (Undocumented)
-Z80.prototype.dd_instructions[0x67] = function()
-{
+Z80.prototype.dd_instructions[0x67] = function() {
    this.ix = (this.ix & 0xff) | (this.a << 8);
 };
 // 0x68 : LD IXL, B (Undocumented)
-Z80.prototype.dd_instructions[0x68] = function()
-{
+Z80.prototype.dd_instructions[0x68] = function() {
    this.ix = (this.ix & 0xff00) | this.b;
 };
 // 0x69 : LD IXL, C (Undocumented)
-Z80.prototype.dd_instructions[0x69] = function()
-{
+Z80.prototype.dd_instructions[0x69] = function() {
    this.ix = (this.ix & 0xff00) | this.c;
 };
 // 0x6a : LD IXL, D (Undocumented)
-Z80.prototype.dd_instructions[0x6a] = function()
-{
+Z80.prototype.dd_instructions[0x6a] = function() {
    this.ix = (this.ix & 0xff00) | this.d;
 };
 // 0x6b : LD IXL, E (Undocumented)
-Z80.prototype.dd_instructions[0x6b] = function()
-{
+Z80.prototype.dd_instructions[0x6b] = function() {
    this.ix = (this.ix & 0xff00) | this.e;
 };
 // 0x6c : LD IXL, IXH (Undocumented)
-Z80.prototype.dd_instructions[0x6c] = function()
-{
+Z80.prototype.dd_instructions[0x6c] = function() {
    this.ix = (this.ix & 0xff00) | (this.ix >>> 8);
 };
 // 0x6d : LD IXL, IXL (Undocumented)
-Z80.prototype.dd_instructions[0x6d] = function()
-{
+Z80.prototype.dd_instructions[0x6d] = function() {
    // No-op.
 };
 // 0x6e : LD L, (IX+n)
-Z80.prototype.dd_instructions[0x6e] = function()
-{
+Z80.prototype.dd_instructions[0x6e] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.l = this.core.mem_read((this.ix + offset) & 0xffff);
 };
 // 0x6f : LD IXL, A (Undocumented)
-Z80.prototype.dd_instructions[0x6f] = function()
-{
+Z80.prototype.dd_instructions[0x6f] = function() {
    this.ix = (this.ix & 0xff00) | this.a;
 };
 // 0x70 : LD (IX+n), B
-Z80.prototype.dd_instructions[0x70] = function()
-{
+Z80.prototype.dd_instructions[0x70] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.core.mem_write((this.ix + offset) & 0xffff, this.b);
 };
 // 0x71 : LD (IX+n), C
-Z80.prototype.dd_instructions[0x71] = function()
-{
+Z80.prototype.dd_instructions[0x71] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.core.mem_write((this.ix + offset) & 0xffff, this.c);
 };
 // 0x72 : LD (IX+n), D
-Z80.prototype.dd_instructions[0x72] = function()
-{
+Z80.prototype.dd_instructions[0x72] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.core.mem_write((this.ix + offset) & 0xffff, this.d);
 };
 // 0x73 : LD (IX+n), E
-Z80.prototype.dd_instructions[0x73] = function()
-{
+Z80.prototype.dd_instructions[0x73] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.core.mem_write((this.ix + offset) & 0xffff, this.e);
 };
 // 0x74 : LD (IX+n), H
-Z80.prototype.dd_instructions[0x74] = function()
-{
+Z80.prototype.dd_instructions[0x74] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.core.mem_write((this.ix + offset) & 0xffff, this.h);
 };
 // 0x75 : LD (IX+n), L
-Z80.prototype.dd_instructions[0x75] = function()
-{
+Z80.prototype.dd_instructions[0x75] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.core.mem_write((this.ix + offset) & 0xffff, this.l);
 };
 // 0x77 : LD (IX+n), A
-Z80.prototype.dd_instructions[0x77] = function()
-{
+Z80.prototype.dd_instructions[0x77] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.core.mem_write((this.ix + offset) & 0xffff, this.a);
 };
 // 0x7c : LD A, IXH (Undocumented)
-Z80.prototype.dd_instructions[0x7c] = function()
-{
+Z80.prototype.dd_instructions[0x7c] = function() {
    this.a = (this.ix >>> 8) & 0xff;
 };
 // 0x7d : LD A, IXL (Undocumented)
-Z80.prototype.dd_instructions[0x7d] = function()
-{
+Z80.prototype.dd_instructions[0x7d] = function() {
    this.a = this.ix & 0xff;
 };
 // 0x7e : LD A, (IX+n)
-Z80.prototype.dd_instructions[0x7e] = function()
-{
+Z80.prototype.dd_instructions[0x7e] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.a = this.core.mem_read((this.ix + offset) & 0xffff);
 };
 // 0x84 : ADD A, IXH (Undocumented)
-Z80.prototype.dd_instructions[0x84] = function()
-{
+Z80.prototype.dd_instructions[0x84] = function() {
    this.do_add((this.ix >>> 8) & 0xff);
 };
 // 0x85 : ADD A, IXL (Undocumented)
-Z80.prototype.dd_instructions[0x85] = function()
-{
+Z80.prototype.dd_instructions[0x85] = function() {
    this.do_add(this.ix & 0xff);
 };
 // 0x86 : ADD A, (IX+n)
-Z80.prototype.dd_instructions[0x86] = function()
-{
+Z80.prototype.dd_instructions[0x86] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.do_add(this.core.mem_read((this.ix + offset) & 0xffff));
 };
 // 0x8c : ADC A, IXH (Undocumented)
-Z80.prototype.dd_instructions[0x8c] = function()
-{
+Z80.prototype.dd_instructions[0x8c] = function() {
    this.do_adc((this.ix >>> 8) & 0xff);
 };
 // 0x8d : ADC A, IXL (Undocumented)
-Z80.prototype.dd_instructions[0x8d] = function()
-{
+Z80.prototype.dd_instructions[0x8d] = function() {
    this.do_adc(this.ix & 0xff);
 };
 // 0x8e : ADC A, (IX+n)
-Z80.prototype.dd_instructions[0x8e] = function()
-{
+Z80.prototype.dd_instructions[0x8e] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.do_adc(this.core.mem_read((this.ix + offset) & 0xffff));
 };
 // 0x94 : SUB IXH (Undocumented)
-Z80.prototype.dd_instructions[0x94] = function()
-{
+Z80.prototype.dd_instructions[0x94] = function() {
    this.do_sub((this.ix >>> 8) & 0xff);
 };
 // 0x95 : SUB IXL (Undocumented)
-Z80.prototype.dd_instructions[0x95] = function()
-{
+Z80.prototype.dd_instructions[0x95] = function() {
    this.do_sub(this.ix & 0xff);
 };
 // 0x96 : SUB A, (IX+n)
-Z80.prototype.dd_instructions[0x96] = function()
-{
+Z80.prototype.dd_instructions[0x96] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.do_sub(this.core.mem_read((this.ix + offset) & 0xffff));
 };
 // 0x9c : SBC IXH (Undocumented)
-Z80.prototype.dd_instructions[0x9c] = function()
-{
+Z80.prototype.dd_instructions[0x9c] = function() {
    this.do_sbc((this.ix >>> 8) & 0xff);
 };
 // 0x9d : SBC IXL (Undocumented)
-Z80.prototype.dd_instructions[0x9d] = function()
-{
+Z80.prototype.dd_instructions[0x9d] = function() {
    this.do_sbc(this.ix & 0xff);
 };
 // 0x9e : SBC A, (IX+n)
-Z80.prototype.dd_instructions[0x9e] = function()
-{
+Z80.prototype.dd_instructions[0x9e] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.do_sbc(this.core.mem_read((this.ix + offset) & 0xffff));
 };
 // 0xa4 : AND IXH (Undocumented)
-Z80.prototype.dd_instructions[0xa4] = function()
-{
+Z80.prototype.dd_instructions[0xa4] = function() {
    this.do_and((this.ix >>> 8) & 0xff);
 };
 // 0xa5 : AND IXL (Undocumented)
-Z80.prototype.dd_instructions[0xa5] = function()
-{
+Z80.prototype.dd_instructions[0xa5] = function() {
    this.do_and(this.ix & 0xff);
 };
 // 0xa6 : AND A, (IX+n)
-Z80.prototype.dd_instructions[0xa6] = function()
-{
+Z80.prototype.dd_instructions[0xa6] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.do_and(this.core.mem_read((this.ix + offset) & 0xffff));
 };
 // 0xac : XOR IXH (Undocumented)
-Z80.prototype.dd_instructions[0xac] = function()
-{
+Z80.prototype.dd_instructions[0xac] = function() {
    this.do_xor((this.ix >>> 8) & 0xff);
 };
 // 0xad : XOR IXL (Undocumented)
-Z80.prototype.dd_instructions[0xad] = function()
-{
+Z80.prototype.dd_instructions[0xad] = function() {
    this.do_xor(this.ix & 0xff);
 };
 // 0xae : XOR A, (IX+n)
-Z80.prototype.dd_instructions[0xae] = function()
-{
+Z80.prototype.dd_instructions[0xae] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.do_xor(this.core.mem_read((this.ix + offset) & 0xffff));
 };
 // 0xb4 : OR IXH (Undocumented)
-Z80.prototype.dd_instructions[0xb4] = function()
-{
+Z80.prototype.dd_instructions[0xb4] = function() {
    this.do_or((this.ix >>> 8) & 0xff);
 };
 // 0xb5 : OR IXL (Undocumented)
-Z80.prototype.dd_instructions[0xb5] = function()
-{
+Z80.prototype.dd_instructions[0xb5] = function() {
    this.do_or(this.ix & 0xff);
 };
 // 0xb6 : OR A, (IX+n)
-Z80.prototype.dd_instructions[0xb6] = function()
-{
+Z80.prototype.dd_instructions[0xb6] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.do_or(this.core.mem_read((this.ix + offset) & 0xffff));
 };
 // 0xbc : CP IXH (Undocumented)
-Z80.prototype.dd_instructions[0xbc] = function()
-{
+Z80.prototype.dd_instructions[0xbc] = function() {
    this.do_cp((this.ix >>> 8) & 0xff);
 };
 // 0xbd : CP IXL (Undocumented)
-Z80.prototype.dd_instructions[0xbd] = function()
-{
+Z80.prototype.dd_instructions[0xbd] = function() {
    this.do_cp(this.ix & 0xff);
 };
 // 0xbe : CP A, (IX+n)
-Z80.prototype.dd_instructions[0xbe] = function()
-{
+Z80.prototype.dd_instructions[0xbe] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.do_cp(this.core.mem_read((this.ix + offset) & 0xffff));
 };
 // 0xcb : CB Prefix (IX bit instructions)
-Z80.prototype.dd_instructions[0xcb] = function()
-{
+Z80.prototype.dd_instructions[0xcb] = function() {
    this.pc = (this.pc + 1) & 0xffff;
-   var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+   let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
    this.pc = (this.pc + 1) & 0xffff;
-   var opcode = this.core.mem_read(this.pc), value;
+   let opcode = this.core.mem_read(this.pc), value;
 
    // As with the "normal" CB prefix, we implement the DDCB prefix
    //  by decoding the opcode directly, rather than using a table.
-   if (opcode < 0x40)
-   {
+   if (opcode < 0x40) {
       // Shift and rotate instructions.
       const ddcb_functions = [this.do_rlc, this.do_rrc, this.do_rl, this.do_rr,
                             this.do_sla, this.do_sra, this.do_sll, this.do_srl];
 
       // Most of the opcodes in this range are not valid,
       //  so we map this opcode onto one of the ones that is.
-      var func = ddcb_functions[(opcode & 0x38) >>> 3],
+      let func = ddcb_functions[(opcode & 0x38) >>> 3],
       value = func.call(this, this.core.mem_read((this.ix + offset) & 0xffff));
 
       this.core.mem_write((this.ix + offset) & 0xffff, value);
    }
-   else
-   {
-      var bit_number = (opcode & 0x38) >>> 3;
+   else {
+      let bit_number = (opcode & 0x38) >>> 3;
 
-      if (opcode < 0x80)
-      {
+      if (opcode < 0x80) {
          // BIT
          this.flags.N = 0;
          this.flags.H = 1;
@@ -3167,14 +2781,12 @@ Z80.prototype.dd_instructions[0xcb] = function()
          this.flags.P = this.flags.Z;
          this.flags.S = ((bit_number === 7) && !this.flags.Z) ? 1 : 0;
       }
-      else if (opcode < 0xc0)
-      {
+      else if (opcode < 0xc0) {
          // RES
          value = this.core.mem_read((this.ix + offset) & 0xffff) & ~(1 << bit_number) & 0xff;
          this.core.mem_write((this.ix + offset) & 0xffff, value);
       }
-      else
-      {
+      else {
          // SET
          value = this.core.mem_read((this.ix + offset) & 0xffff) | (1 << bit_number);
          this.core.mem_write((this.ix + offset) & 0xffff, value);
@@ -3183,8 +2795,7 @@ Z80.prototype.dd_instructions[0xcb] = function()
 
    // This implements the undocumented shift, RES, and SET opcodes,
    //  which write their result to memory and also to an 8080 register.
-   if (value !== undefined)
-   {
+   if (value !== undefined) {
       if ((opcode & 0x07) === 0)
          this.b = value;
       else if ((opcode & 0x07) === 1)
@@ -3205,32 +2816,27 @@ Z80.prototype.dd_instructions[0xcb] = function()
    this.cycle_counter += this.cycle_counts_cb[opcode] + 8;
 };
 // 0xe1 : POP IX
-Z80.prototype.dd_instructions[0xe1] = function()
-{
+Z80.prototype.dd_instructions[0xe1] = function() {
    this.ix = this.pop_word();
 };
 // 0xe3 : EX (SP), IX
-Z80.prototype.dd_instructions[0xe3] = function()
-{
-   var temp = this.ix;
+Z80.prototype.dd_instructions[0xe3] = function() {
+   let temp = this.ix;
    this.ix = this.core.mem_read(this.sp);
    this.ix |= this.core.mem_read((this.sp + 1) & 0xffff) << 8;
    this.core.mem_write(this.sp, temp & 0xff);
    this.core.mem_write((this.sp + 1) & 0xffff, (temp >>> 8) & 0xff);
 };
 // 0xe5 : PUSH IX
-Z80.prototype.dd_instructions[0xe5] = function()
-{
+Z80.prototype.dd_instructions[0xe5] = function() {
    this.push_word(this.ix);
 };
 // 0xe9 : JP (IX)
-Z80.prototype.dd_instructions[0xe9] = function()
-{
+Z80.prototype.dd_instructions[0xe9] = function() {
    this.pc = (this.ix - 1) & 0xffff;
 };
 // 0xf9 : LD SP, IX
-Z80.prototype.dd_instructions[0xf9] = function()
-{
+Z80.prototype.dd_instructions[0xf9] = function() {
    this.sp = this.ix;
 };
 
@@ -3317,62 +2923,62 @@ Z80.prototype.cycle_counts_dd = [
     0,  0,  0,  0,  0,  0,  0,  0,  0, 10,  0,  0,  0,  0,  0,  0
 ];
 
-import Memory from './ExidyMemory'
+import Memory from './ExidyMemory';
 import Input from './ExidyInput';
 import Output from './ExidyOutput';
 
 export class ExidyZ80 {
 
-	private cpu : any;
+    private cpu: any;
 
-	public constructor(
-		memory : Memory,
-		input : Input,
-		output : Output
-	) {
-		this.cpu = new Z80({
-			mem_read : (address) => { return memory.readByte(address); },
-			mem_write : (address, data) => { memory.writeByte(address, data); },
-			io_read : (address) => { return input.readByte(address); },
-			io_write :  (address, data) => { output.writeByte(address, data); }
-		}).api;
-	}
+    public constructor(
+        memory: Memory,
+        input: Input,
+        output: Output) {
+        
+        this.cpu = new Z80({
+            mem_read: (address) => { return memory.readByte(address); },
+            mem_write: (address, data) => { memory.writeByte(address, data); },
+            io_read: (address) => { return input.readByte(address); },
+            io_write:  (address, data) => { output.writeByte(address, data); }
+        }).api;
+    }
 
-	public reset(address) : void {
-		this.cpu.reset(address);
-	}
+    public reset(address): void {
+        this.cpu.reset(address);
+    }
 
-	public executeInstruction() : number {
-		return this.cpu.run_instruction();
-	}
+    public executeInstruction(): number {
+        return this.cpu.run_instruction();
+    }
 
-	public load(data : Uint8Array) :void {
-		this.cpu.load({
-			i : data[0],
-			l_prime : data[1],
-			h_prime : data[2],
-			e_prime : data[3],
-			d_prime : data[4],
-			c_prime : data[5],
-			b_prime : data[6],
-			f_prime : data[7],
-			a_prime : data[8],
-			l       : data[9],
-			h       : data[10],
-			e       : data[11],
-			d       : data[12],
-			c       : data[13],
-			b       : data[14],
-			iy      : data[15] | (data[16]<<8),
-			ix      : data[17] | (data[18]<<8),
-			iff2    : (data[19] & 0x04) !== 0 ? 1 : 0,
-			iff1    : (data[19] & 0x02) !== 0 ? 1 : 0,
-			r       : data[20],
-			f       : data[21],
-			a       : data[22],
-			sp      : data[23] | (data[24]<<8),
-			imode   : data[25],
-			pc      : data[26] | (data[27]<<8)
-		});
-	}
+    public load(data: Uint8Array): void {
+        this.cpu.load({
+            i : data[0],
+            l_prime : data[1],
+            h_prime : data[2],
+            e_prime : data[3],
+            d_prime : data[4],
+            c_prime : data[5],
+            b_prime : data[6],
+            f_prime : data[7],
+            a_prime : data[8],
+            l       : data[9],
+            h       : data[10],
+            e       : data[11],
+            d       : data[12],
+            c       : data[13],
+            b       : data[14],
+            iy      : data[15] | (data[16] << 8),
+            ix      : data[17] | (data[18] << 8),
+            iff2    : (data[19] & 0x04) !== 0 ? 1 : 0,
+            iff1    : (data[19] & 0x02) !== 0 ? 1 : 0,
+            r       : data[20],
+            f       : data[21],
+            a       : data[22],
+            sp      : data[23] | (data[24] << 8),
+            imode   : data[25],
+            pc      : data[26] | (data[27] << 8)
+        });
+    }
 }

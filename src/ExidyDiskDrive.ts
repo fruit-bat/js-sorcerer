@@ -1,195 +1,167 @@
-"use strict"
+'use strict';
 
-import ExidyDisk from './ExidyDisk'
-import { SECTORS_PER_TRACK, NUMBER_OF_TRACKS, BYTES_PER_SECTOR } from './ExidyDisk'
+import ExidyDisk from './ExidyDisk';
+import { SECTORS_PER_TRACK, NUMBER_OF_TRACKS, BYTES_PER_SECTOR } from './ExidyDisk';
 
 const ACTIVE_FOR_TICKS = 800;
 
-export default class ExidyDiskDrive
-{
-	private _activeCount : number = 0;
-	private _sectorNumber : number = 0;
-	private _trackNumber : number = 0;
-	private _newSector : boolean = false;
-	private _disk : ExidyDisk = null;
-	private _sectorIndex : number = 0;
-	private _writeIndex : number = 0;
-	private _unitNumber : number;
+export default class ExidyDiskDrive {
 
-	public constructor(unitNumber : number) {
-		this._unitNumber = unitNumber;
-	}
+    private _activeCount: number = 0;
+    private _sectorNumber: number = 0;
+    private _trackNumber: number = 0;
+    private _newSector: boolean = false;
+    private _disk: ExidyDisk = null;
+    private _sectorIndex: number = 0;
+    private _writeIndex: number = 0;
+    private _unitNumber: number;
 
-	public getUnitLetter() : string {
-		return "ABCD".charAt(this._unitNumber);
-	}
+    public constructor(unitNumber: number) {
+        this._unitNumber = unitNumber;
+    }
 
-	public set disk(disk : ExidyDisk)
-	{
-		this._disk = disk;
-	}
+    public getUnitLetter(): string {
+        return 'ABCD'.charAt(this._unitNumber);
+    }
 
-	public get disk() : ExidyDisk
-	{
-		return this._disk;
-	}
+    public set disk(disk: ExidyDisk) {
+        this._disk = disk;
+    }
 
-	public diskIn() : boolean
-	{
-		return this._disk != null;
-	}
+    public get disk(): ExidyDisk {
+        return this._disk;
+    }
 
-	public dataReady() : boolean
-	{
-		return true;
-	}
+    public diskIn(): boolean {
+        return this._disk != null;
+    }
 
-	public home() : boolean
-	{
-		return this._trackNumber === 0;
-	}
+    public dataReady(): boolean {
+        return true;
+    }
 
-	public stepForward() : void
-	{
-		if( this._trackNumber < ( NUMBER_OF_TRACKS - 1 ) )
-		{
-			++this._trackNumber;
-		}
-	}
+    public home(): boolean {
+        return this._trackNumber === 0;
+    }
 
-	public stepBackward() : void
-	{
-		if( this._trackNumber > 0 )
-		{
-			--this._trackNumber;
-		}
-	}
+    public stepForward(): void {
+        if ( this._trackNumber < ( NUMBER_OF_TRACKS - 1 ) ) {
+            ++this._trackNumber;
+        }
+    }
 
-	public active() : boolean
-	{
-		return this._activeCount > 0;
-	}
+    public stepBackward(): void {
+        if ( this._trackNumber > 0 ) {
+            --this._trackNumber;
+        }
+    }
 
-	public activate() : void
-	{
-		if(this._activeCount == 0 && this._disk != null) {
-			this._disk.activate();
-			this._activeCount = ACTIVE_FOR_TICKS;
-		}
-	}
+    public active(): boolean {
+        return this._activeCount > 0;
+    }
 
-	private writeReg0(b : number) : void
-	{
-		switch( b )
-		{
-		case 0xA0:
-			break;
-		case 0x20:
-		case 0x21: // Disk b:
-			this.activate();
-			break;
-		case 0x60:
-			this.stepBackward();
-			break;
-		case 0x61:
-			this.stepForward();
-			break;
-		}
-	}
+    public activate(): void {
+        if (this._activeCount === 0 && this._disk !== null) {
+            this._disk.activate();
+            this._activeCount = ACTIVE_FOR_TICKS;
+        }
+    }
 
-	public readyWrite() : void
-	{
-		this._writeIndex = 0;
-	}
+    private writeReg0(b: number): void {
+        switch ( b ) {
+        case 0xA0:
+            break;
+        case 0x20:
+        case 0x21: // Disk b:
+            this.activate();
+            break;
+        case 0x60:
+            this.stepBackward();
+            break;
+        case 0x61:
+            this.stepForward();
+            break;
+        }
+    }
 
-	private writeReg1(b : number) : void
-	{
-		switch( b )
-		{
-		case 0xA0:
-			break;
-		case 0x20:
-		case 0x21: // Disk b:
-			this.activate();
-			break;
-		case 0x60:
-			this.stepBackward();
-			break;
-		case 0x61:
-			this.stepForward();
-			break;
-		}
-	}
+    public readyWrite(): void {
+        this._writeIndex = 0;
+    }
 
-	public writeReg2(b :number) : void
-	{
-		if( this.active() ) {
-			this._activeCount = ACTIVE_FOR_TICKS;
-		}
-		this._disk.write( this._trackNumber, this._sectorNumber, this._writeIndex++, b );
-	}
+    private writeReg1(b: number): void {
+        switch ( b ) {
+        case 0xA0:
+            break;
+        case 0x20:
+        case 0x21: // Disk b:
+            this.activate();
+            break;
+        case 0x60:
+            this.stepBackward();
+            break;
+        case 0x61:
+            this.stepForward();
+            break;
+        }
+    }
 
-	public readReg0() : number
-	{
-		if( this.active() ) {
-			this._activeCount = ACTIVE_FOR_TICKS;
-		}
-		let r = this._sectorNumber;
-		if( this._newSector )
-		{
-			r |= 0x80;
-			this._newSector = false;
-		}
-		return r;
-	}
+    public writeReg2(b: number): void {
+        if ( this.active() ) {
+            this._activeCount = ACTIVE_FOR_TICKS;
+        }
+        this._disk.write( this._trackNumber, this._sectorNumber, this._writeIndex++, b );
+    }
 
-	private readReg1() : number
-	{
-		let r = 0;
-		if( this.active() ) r |= 0x20;
-		if( this.home() ) r |= 0x08;
-		if( this.dataReady() ) r |= 0x80;
-		return r;
-	}
+    public readReg0(): number {
+        if ( this.active() ) {
+            this._activeCount = ACTIVE_FOR_TICKS;
+        }
+        let r = this._sectorNumber;
+        if ( this._newSector ) {
+            r |= 0x80;
+            this._newSector = false;
+        }
+        return r;
+    }
 
-	public readReg2() : number
-	{
-		if( this.active() ) {
-			this._activeCount = ACTIVE_FOR_TICKS;
-		}
-		if( this._disk != null )
-		{
-			if( this._sectorIndex < BYTES_PER_SECTOR )
-			{
-				let data = this._disk.read( this._trackNumber, this._sectorNumber, this._sectorIndex++ );
-				return data & 0xff;
-			}
-		}
-		return 0;
-	}
+    private readReg1(): number {
+        let r = 0;
+        if ( this.active() ) r |= 0x20;
+        if ( this.home() ) r |= 0x08;
+        if ( this.dataReady() ) r |= 0x80;
+        return r;
+    }
 
-	public tick() : void
-	{
-		if( this.active() )
-		{
-			this._sectorNumber++;
-			this._sectorIndex = 0;
+    public readReg2(): number {
+        if ( this.active() ) {
+            this._activeCount = ACTIVE_FOR_TICKS;
+        }
+        if ( this._disk != null ) {
+            if ( this._sectorIndex < BYTES_PER_SECTOR ) {
+                let data = this._disk.read( this._trackNumber, this._sectorNumber, this._sectorIndex++ );
+                return data & 0xff;
+            }
+        }
+        return 0;
+    }
 
-			if( this._sectorNumber >= SECTORS_PER_TRACK )
-			{
-				this._sectorNumber = 0;
-			}
-			this._newSector = true;
+    public tick(): void {
+        if ( this.active() ) {
+            this._sectorNumber++;
+            this._sectorIndex = 0;
 
-			this._activeCount--;
+            if ( this._sectorNumber >= SECTORS_PER_TRACK ) {
+                this._sectorNumber = 0;
+            }
+            this._newSector = true;
 
-			if( !this.active() )
-			{
-				if( this._disk != null )
-				{
-					this._disk.deactivate();
-				}
-			}
-		}
-	}
+            this._activeCount--;
+
+            if ( !this.active() ) {
+                if ( this._disk !== null ) {
+                    this._disk.deactivate();
+                }
+            }
+        }
+    }
 }
