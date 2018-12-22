@@ -9,12 +9,12 @@ export default class ExidyCharacters extends Ram {
     private charsCtx: CanvasRenderingContext2D;
     private byteCanvas: HTMLCanvasElement;
     private byteCtx: CanvasRenderingContext2D;
-    private charUpdated: (char: number) => void;
+    private charUpdated: (char: number, row: number) => void;
 
     public constructor(
         memory: Uint8Array,
         charsCanvas: HTMLCanvasElement,
-        charUpdated: (char: number) => void) {
+        charUpdated: (char: number, row: number) => void) {
         
         super(memory);
         this.charsCanvas = charsCanvas;
@@ -38,22 +38,20 @@ export default class ExidyCharacters extends Ram {
     writeByte(address: number, data: number): void {
         if (address >= 0xFC00 && (data !== this.readByte(address))) {
             super.writeByte(address, data);
-            this.charUpdated(this.updateByte(address, data));
+            const offset = address - CHARS_START;
+            const row = offset & 0x7;
+            const char = offset >> 3;
+            this.charsCtx.drawImage(this.byteCanvas, 0, data, 8, 1, char << 3, row, 8, 1);
+            this.charUpdated(char, row);
         }
-    }
-
-    private updateByte(address: number, data: number): number {
-        const offset = address - CHARS_START;
-        const row = offset & 0x7;
-        const char = offset >> 3;
-        this.charsCtx.drawImage(this.byteCanvas, 0, data, 8, 1, char << 3, row, 8, 1);
-        return char;
     }
 
     public updateAll(): void {
         for (let i = 0; i < (256 << 3); ++i) {
             const data = this.readByte(CHARS_START + i);
-            this.updateByte(CHARS_START + i, data);
+            const row = i & 0x7;
+            const char = i >> 3;
+            this.charsCtx.drawImage(this.byteCanvas, 0, data, 8, 1, char << 3, row, 8, 1);
         }
     }
 }

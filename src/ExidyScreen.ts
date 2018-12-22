@@ -40,12 +40,25 @@ export default class ExidyScreen extends Ram {
         const char = this.readByte(address);
         this.screenCtx.drawImage(this.charsCanvas, char << 3, 0, 8, 8, col << 3, row << 3, 8, 8);
     }
-
-    public charUpdated(updatedChar: number): void {
+       
+    public charUpdated(updatedChar: number, updatedRow: number): void {
         for (let address = SCREEN_START; address < SCREEN_START + SCREEN_SIZE_BYTES; ++address) {
             const char = this.readByte(address);
             if (updatedChar === char) {
-                this.updateByte(address, char);
+                const index = address - SCREEN_START;
+                const row = index >> 6;
+                const col = index - (row << 6);
+                this.screenCtx.drawImage(
+                  this.charsCanvas, 
+                  char << 3,
+                  updatedRow,
+                  8, 
+                  1, 
+                  col << 3, 
+                  (row << 3) + updatedRow, 
+                  8, 
+                  1
+                );
             }
         }
     }

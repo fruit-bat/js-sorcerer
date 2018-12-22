@@ -53,8 +53,8 @@ export default class MemorySystem {
         charsCanvas.height = 8;
 
         this.exidyScreen = new ExidyScreen(this._memory, charsCanvas);
-        this.exidyCharacters = new ExidyCharacters(this._memory, charsCanvas, (char) => {
-            this.exidyScreen.charUpdated(char);
+        this.exidyCharacters = new ExidyCharacters(this._memory, charsCanvas, (char, row) => {
+            this.exidyScreen.charUpdated(char, row);
         });
 
         this.multplexor.setHandler(SCREEN_START, SCREEN_SIZE_BYTES, this.exidyScreen);
