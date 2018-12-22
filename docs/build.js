@@ -1,5 +1,5 @@
 define("BinaryAjax", ["require", "exports"], function (require, exports) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class BinaryAjax {
         static read(url) {
@@ -17,7 +17,7 @@ define("BinaryAjax", ["require", "exports"], function (require, exports) {
     exports.default = BinaryAjax;
 });
 define("DropZone", ["require", "exports"], function (require, exports) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class DropZone {
         stopEvent(e) {
@@ -42,7 +42,7 @@ define("DropZone", ["require", "exports"], function (require, exports) {
         }
         handleDrop(e) {
             this.stopEvent(e);
-            var url = e.dataTransfer.getData('text/plain');
+            const url = e.dataTransfer.getData('text/plain');
             if (url) {
                 console.log('TODO drop url');
             }
@@ -53,22 +53,22 @@ define("DropZone", ["require", "exports"], function (require, exports) {
         constructor(element, handler) {
             this.handler = handler;
             this.element = element;
-            this.element.addEventListener("dragenter", (e) => { this.handleDragEnter(e); }, false);
-            this.element.addEventListener("dragover", (e) => { this.handleDragOver(e); }, false);
-            this.element.addEventListener("drop", (e) => { this.handleDrop(e); }, false);
+            this.element.addEventListener('dragenter', (e) => { this.handleDragEnter(e); }, false);
+            this.element.addEventListener('dragover', (e) => { this.handleDragOver(e); }, false);
+            this.element.addEventListener('drop', (e) => { this.handleDrop(e); }, false);
         }
     }
     exports.default = DropZone;
 });
 define("ExidyDisk", ["require", "exports"], function (require, exports) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SECTORS_PER_TRACK = 16;
     exports.NUMBER_OF_TRACKS = 77;
     exports.BYTES_PER_SECTOR = 256 + 14;
 });
 define("ExidyArrayDisk", ["require", "exports", "ExidyDisk"], function (require, exports, ExidyDisk_1) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class ExidyArrayDisk {
         constructor(data) {
@@ -95,7 +95,7 @@ define("ExidyTape", ["require", "exports"], function (require, exports) {
     Object.defineProperty(exports, "__esModule", { value: true });
 });
 define("ExidyArrayTape", ["require", "exports"], function (require, exports) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class ArrayTape {
         constructor(data) {
@@ -123,7 +123,7 @@ define("ExidyOutput", ["require", "exports"], function (require, exports) {
     Object.defineProperty(exports, "__esModule", { value: true });
 });
 define("ExidyKeyboard", ["require", "exports"], function (require, exports) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class Keyboard {
         constructor() {
@@ -147,7 +147,7 @@ define("ExidyKeyboard", ["require", "exports"], function (require, exports) {
     exports.default = Keyboard;
 });
 define("ExidyBrowserKeyboard", ["require", "exports", "ExidyKeyboard"], function (require, exports, ExidyKeyboard_1) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class KeyConfig {
         constructor(key, row, col, keyCode, keys) {
@@ -222,6 +222,7 @@ define("ExidyBrowserKeyboard", ["require", "exports", "ExidyKeyboard"], function
         new KeyConfig('Repeat', 1, 1, 119, ['F8']),
         new KeyConfig('^', 11, 3, 163, ['^']),
         new KeyConfig('-', 11, 4, 173, ['-']),
+        new KeyConfig('-', 11, 4, 189, ['-']),
         new KeyConfig(',', 8, 0, 188, [',']),
         new KeyConfig('.', 9, 1, 190, ['.']),
         new KeyConfig('/', 9, 0, 191, ['/']),
@@ -265,6 +266,7 @@ define("ExidyBrowserKeyboard", ["require", "exports", "ExidyKeyboard"], function
         }
         browserKeyDown(key) {
             const mapping = this._keyCodeToConfig[key];
+            console.log(key + ' ' + JSON.stringify(mapping));
             if (mapping) {
                 this._keyboard.press(mapping.row, mapping.col);
             }
@@ -277,7 +279,7 @@ define("ExidyCentronics", ["require", "exports"], function (require, exports) {
     Object.defineProperty(exports, "__esModule", { value: true });
 });
 define("ExidyCentronicsSystem", ["require", "exports"], function (require, exports) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class CentronicsSystem {
         set device(device) {
@@ -294,7 +296,7 @@ define("ExidyCentronicsSystem", ["require", "exports"], function (require, expor
     exports.default = CentronicsSystem;
 });
 define("ExidyMemory", ["require", "exports"], function (require, exports) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MEMORY_SIZE_IN_BYTES = 65536;
     exports.CHARS_START = 0xF800;
@@ -305,7 +307,7 @@ define("ExidyMemory", ["require", "exports"], function (require, exports) {
     exports.CHARS_SIZE_BYTES = 8 * 256;
 });
 define("ExidyMemoryRam", ["require", "exports"], function (require, exports) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class Ram {
         constructor(memory) {
@@ -323,7 +325,7 @@ define("ExidyMemoryRam", ["require", "exports"], function (require, exports) {
     exports.default = Ram;
 });
 define("ExidyCharacters", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"], function (require, exports, ExidyMemoryRam_1, ExidyMemory_1) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class ExidyCharacters extends ExidyMemoryRam_1.default {
         constructor(memory, charsCanvas, charUpdated) {
@@ -332,13 +334,13 @@ define("ExidyCharacters", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"
             this.byteCanvas = document.createElement('canvas');
             this.byteCanvas.width = 8;
             this.byteCanvas.height = 256;
-            this.byteCtx = this.byteCanvas.getContext("2d");
-            this.charsCtx = this.charsCanvas.getContext("2d");
+            this.byteCtx = this.byteCanvas.getContext('2d');
+            this.charsCtx = this.charsCanvas.getContext('2d');
             this.charUpdated = charUpdated;
             for (let i = 0; i < 256; ++i) {
                 let j = i;
                 for (let x = 0; x < 8; ++x) {
-                    this.byteCtx.fillStyle = ((j & 0x80) === 0x80) ? "white" : "black";
+                    this.byteCtx.fillStyle = ((j & 0x80) === 0x80) ? 'white' : 'black';
                     this.byteCtx.fillRect(x, i, 1, 1);
                     j <<= 1;
                 }
@@ -347,27 +349,26 @@ define("ExidyCharacters", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"
         writeByte(address, data) {
             if (address >= 0xFC00 && (data !== this.readByte(address))) {
                 super.writeByte(address, data);
-                this.charUpdated(this.updateByte(address, data));
+                const offset = address - ExidyMemory_1.CHARS_START;
+                const row = offset & 0x7;
+                const char = offset >> 3;
+                this.charsCtx.drawImage(this.byteCanvas, 0, data, 8, 1, char << 3, row, 8, 1);
+                this.charUpdated(char, row);
             }
-        }
-        updateByte(address, data) {
-            const offset = address - ExidyMemory_1.CHARS_START;
-            const row = offset & 0x7;
-            const char = offset >> 3;
-            this.charsCtx.drawImage(this.byteCanvas, 0, data, 8, 1, char << 3, row, 8, 1);
-            return char;
         }
         updateAll() {
             for (let i = 0; i < (256 << 3); ++i) {
                 const data = this.readByte(ExidyMemory_1.CHARS_START + i);
-                this.updateByte(ExidyMemory_1.CHARS_START + i, data);
+                const row = i & 0x7;
+                const char = i >> 3;
+                this.charsCtx.drawImage(this.byteCanvas, 0, data, 8, 1, char << 3, row, 8, 1);
             }
         }
     }
     exports.default = ExidyCharacters;
 });
 define("ExidyDiskDrive", ["require", "exports", "ExidyDisk"], function (require, exports, ExidyDisk_2) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     const ACTIVE_FOR_TICKS = 800;
     class ExidyDiskDrive {
@@ -382,7 +383,7 @@ define("ExidyDiskDrive", ["require", "exports", "ExidyDisk"], function (require,
             this._unitNumber = unitNumber;
         }
         getUnitLetter() {
-            return "ABCD".charAt(this._unitNumber);
+            return 'ABCD'.charAt(this._unitNumber);
         }
         set disk(disk) {
             this._disk = disk;
@@ -413,7 +414,7 @@ define("ExidyDiskDrive", ["require", "exports", "ExidyDisk"], function (require,
             return this._activeCount > 0;
         }
         activate() {
-            if (this._activeCount == 0 && this._disk != null) {
+            if (this._activeCount === 0 && this._disk !== null) {
                 this._disk.activate();
                 this._activeCount = ACTIVE_FOR_TICKS;
             }
@@ -502,7 +503,7 @@ define("ExidyDiskDrive", ["require", "exports", "ExidyDisk"], function (require,
                 this._newSector = true;
                 this._activeCount--;
                 if (!this.active()) {
-                    if (this._disk != null) {
+                    if (this._disk !== null) {
                         this._disk.deactivate();
                     }
                 }
@@ -512,7 +513,7 @@ define("ExidyDiskDrive", ["require", "exports", "ExidyDisk"], function (require,
     exports.default = ExidyDiskDrive;
 });
 define("ExidyMemoryNone", ["require", "exports"], function (require, exports) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class NoMemory {
         constructor() {
@@ -526,7 +527,7 @@ define("ExidyMemoryNone", ["require", "exports"], function (require, exports) {
     exports.default = NoMemory;
 });
 define("ExidyMemoryRom", ["require", "exports"], function (require, exports) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class Rom {
         constructor(memory) {
@@ -543,7 +544,7 @@ define("ExidyMemoryRom", ["require", "exports"], function (require, exports) {
     exports.default = Rom;
 });
 define("ExidyScreen", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"], function (require, exports, ExidyMemoryRam_2, ExidyMemory_2) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class ExidyScreen extends ExidyMemoryRam_2.default {
         constructor(memory, charsCanvas) {
@@ -552,7 +553,7 @@ define("ExidyScreen", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"], f
             this.screenCanvas.width = 512;
             this.screenCanvas.height = 240;
             this.charsCanvas = charsCanvas;
-            this.screenCtx = this.screenCanvas.getContext("2d");
+            this.screenCtx = this.screenCanvas.getContext('2d');
         }
         get canvas() {
             return this.screenCanvas;
@@ -570,11 +571,14 @@ define("ExidyScreen", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"], f
             const char = this.readByte(address);
             this.screenCtx.drawImage(this.charsCanvas, char << 3, 0, 8, 8, col << 3, row << 3, 8, 8);
         }
-        charUpdated(updatedChar) {
+        charUpdated(updatedChar, updatedRow) {
             for (let address = ExidyMemory_2.SCREEN_START; address < ExidyMemory_2.SCREEN_START + ExidyMemory_2.SCREEN_SIZE_BYTES; ++address) {
                 const char = this.readByte(address);
                 if (updatedChar === char) {
-                    this.updateByte(address, char);
+                    const index = address - ExidyMemory_2.SCREEN_START;
+                    const row = index >> 6;
+                    const col = index - (row << 6);
+                    this.screenCtx.drawImage(this.charsCanvas, char << 3, updatedRow, 8, 1, col << 3, (row << 3) + updatedRow, 8, 1);
                 }
             }
         }
@@ -588,7 +592,7 @@ define("ExidyScreen", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"], f
     exports.default = ExidyScreen;
 });
 define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryNone", "ExidyMemory", "ExidyMemoryRam", "ExidyMemoryRom", "ExidyCharacters", "ExidyScreen"], function (require, exports, ExidyMemoryNone_1, ExidyMemory_3, ExidyMemoryRam_3, ExidyMemoryRom_1, ExidyCharacters_1, ExidyScreen_1) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class Multiplexor {
         constructor() {
@@ -617,8 +621,8 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryNone", "ExidyMemo
             charsCanvas.width = 2048;
             charsCanvas.height = 8;
             this.exidyScreen = new ExidyScreen_1.default(this._memory, charsCanvas);
-            this.exidyCharacters = new ExidyCharacters_1.default(this._memory, charsCanvas, (char) => {
-                this.exidyScreen.charUpdated(char);
+            this.exidyCharacters = new ExidyCharacters_1.default(this._memory, charsCanvas, (char, row) => {
+                this.exidyScreen.charUpdated(char, row);
             });
             this.multplexor.setHandler(ExidyMemory_3.SCREEN_START, ExidyMemory_3.SCREEN_SIZE_BYTES, this.exidyScreen);
             this.multplexor.setHandler(ExidyMemory_3.CHARS_START, ExidyMemory_3.CHARS_SIZE_BYTES, this.exidyCharacters);
@@ -649,7 +653,7 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryNone", "ExidyMemo
     exports.default = MemorySystem;
 });
 define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive"], function (require, exports, ExidyDiskDrive_1) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     const MEM_DISK_REG_START = 0xBE00;
     const MEM_DISK_REG_LEN = 3;
@@ -670,13 +674,13 @@ define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive"], function (re
             this._drives[drive].disk = disk;
         }
         dataReady() {
-            return this._activeDrive == null ? false : this._activeDrive.dataReady();
+            return this._activeDrive === null ? false : this._activeDrive.dataReady();
         }
         home() {
-            return this._activeDrive != null ? this._activeDrive.home() : false;
+            return this._activeDrive !== null ? this._activeDrive.home() : false;
         }
         stepForward() {
-            if (this._activeDrive != null) {
+            if (this._activeDrive !== null) {
                 this._activeDrive.stepForward();
             }
         }
@@ -696,7 +700,7 @@ define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive"], function (re
             this._activeDrive.activate();
         }
         active() {
-            return this._activeDrive != null;
+            return this._activeDrive !== null;
         }
         writeReg0(b) {
             switch (b) {
@@ -756,7 +760,7 @@ define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive"], function (re
             }
         }
         readReg0() {
-            return this._activeDrive != null ? this._activeDrive.readReg0() : 0;
+            return this._activeDrive !== null ? this._activeDrive.readReg0() : 0;
         }
         readReg1() {
             let r = this._activeDriveNumber;
@@ -769,7 +773,7 @@ define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive"], function (re
             return r;
         }
         readReg2() {
-            return this._activeDrive == null ? 0 : this._activeDrive.readReg2();
+            return this._activeDrive === null ? 0 : this._activeDrive.readReg2();
         }
         writeByte(address, b) {
             switch (address - MEM_DISK_REG_START) {
@@ -796,8 +800,8 @@ define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive"], function (re
             for (let i = 0; i < this._drives.length; ++i) {
                 this._drives[i].tick();
             }
-            if (this._activeDrive != null) {
-                if (this._activeDrive.active() == false) {
+            if (this._activeDrive !== null) {
+                if (this._activeDrive.active() === false) {
                     this._activeDrive = null;
                     this._activeDriveNumber = 0x40;
                 }
@@ -844,6 +848,7 @@ define("ExidyFile", ["require", "exports"], function (require, exports) {
     Object.defineProperty(exports, "__esModule", { value: true });
 });
 define("ExidyFileBinaryAjax", ["require", "exports", "BinaryAjax"], function (require, exports, BinaryAjax_1) {
+    'use scrict';
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class ExidyFileBinaryAjax {
@@ -857,7 +862,7 @@ define("ExidyFileBinaryAjax", ["require", "exports", "BinaryAjax"], function (re
     exports.default = ExidyFileBinaryAjax;
 });
 define("ExidyIo", ["require", "exports"], function (require, exports) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class NoInput {
         readByte(address) {
@@ -908,15 +913,54 @@ define("ExidyIo", ["require", "exports"], function (require, exports) {
     }
     exports.IoSystem = IoSystem;
 });
+define("ExidyScreenPeriodicUpdate", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"], function (require, exports, ExidyMemoryRam_4, ExidyMemory_4) {
+    'use strict';
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class ExidyScreen extends ExidyMemoryRam_4.default {
+        constructor(memory, charsCanvas) {
+            super(memory);
+            this.screenCanvas = document.createElement('canvas');
+            this.screenCanvas.width = 512;
+            this.screenCanvas.height = 240;
+            this.charsCanvas = charsCanvas;
+            this.screenCtx = this.screenCanvas.getContext('2d');
+            setInterval(() => { this.updateAll(); }, 1000);
+        }
+        get canvas() {
+            return this.screenCanvas;
+        }
+        writeByte(address, data) {
+            if (data !== this.readByte(address)) {
+                super.writeByte(address, data);
+            }
+        }
+        updateByte(address, data) {
+            const index = address - ExidyMemory_4.SCREEN_START;
+            const row = index >> 6;
+            const col = index - (row << 6);
+            const char = this.readByte(address);
+            this.screenCtx.drawImage(this.charsCanvas, char << 3, 0, 8, 8, col << 3, row << 3, 8, 8);
+        }
+        charUpdated(updatedChar, updatedRow) {
+        }
+        updateAll() {
+            for (let address = ExidyMemory_4.SCREEN_START; address < ExidyMemory_4.SCREEN_START + ExidyMemory_4.SCREEN_SIZE_BYTES; ++address) {
+                const char = this.readByte(address);
+                this.updateByte(address, char);
+            }
+        }
+    }
+    exports.default = ExidyScreen;
+});
 define("ExidyZ80", ["require", "exports"], function (require, exports) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     function Z80(core) {
-        if (!core || (typeof core.mem_read !== "function") || (typeof core.mem_write !== "function") ||
-            (typeof core.io_read !== "function") || (typeof core.io_write !== "function"))
-            throw ("Z80: Core object is missing required functions.");
+        if (!core || (typeof core.mem_read !== 'function') || (typeof core.mem_write !== 'function') ||
+            (typeof core.io_read !== 'function') || (typeof core.io_write !== 'function'))
+            throw ('Z80: Core object is missing required functions.');
         if (this === window)
-            throw ("Z80: This function is a constructor; call it using operator new.");
+            throw ('Z80: This function is a constructor; call it using operator new.');
         this.core = core;
         this.a = 0x00;
         this.b = 0x00;
@@ -998,7 +1042,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.run_instruction = function () {
         if (!this.halted) {
-            var doing_delayed_di = false, doing_delayed_ei = false;
+            let doing_delayed_di = false, doing_delayed_ei = false;
             if (this.do_delayed_di) {
                 this.do_delayed_di = false;
                 doing_delayed_di = true;
@@ -1008,7 +1052,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
                 doing_delayed_ei = true;
             }
             this.r = (this.r & 0x80) | (((this.r & 0x7f) + 1) & 0x7f);
-            var opcode = this.core.mem_read(this.pc);
+            let opcode = this.core.mem_read(this.pc);
             this.decode_instruction(opcode);
             this.pc = (this.pc + 1) & 0xffff;
             if (doing_delayed_di) {
@@ -1019,7 +1063,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
                 this.iff1 = 1;
                 this.iff2 = 1;
             }
-            var retval = this.cycle_counter;
+            let retval = this.cycle_counter;
             this.cycle_counter = 0;
             return retval;
         }
@@ -1053,15 +1097,15 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
             }
             else if (this.imode === 2) {
                 this.push_word(this.pc);
-                var vector_address = ((this.i << 8) | data);
+                let vector_address = ((this.i << 8) | data);
                 this.pc = this.core.read_mem_byte(vector_address) |
                     (this.core.read_mem_byte((vector_address + 1) & 0xffff) << 8);
                 this.cycle_counter += 19;
             }
         }
     };
-    var get_operand = function (opcode) {
-        var opcodeLowerBits = opcode & 0x07;
+    let get_operand = function (opcode) {
+        let opcodeLowerBits = opcode & 0x07;
         return (opcodeLowerBits === 0) ? this.b :
             (opcodeLowerBits === 1) ? this.c :
                 (opcodeLowerBits === 2) ? this.d :
@@ -1077,8 +1121,8 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
             this.iff2 = 1;
         }
         else if ((opcode >= 0x40) && (opcode < 0x80)) {
-            var operand = get_operand.call(this, opcode);
-            var operandShifted = (opcode & 0x38) >>> 3;
+            let operand = get_operand.call(this, opcode);
+            let operandShifted = (opcode & 0x38) >>> 3;
             if (operandShifted === 0)
                 this.b = operand;
             else if (operandShifted === 1)
@@ -1097,13 +1141,13 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
                 this.a = operand;
         }
         else if ((opcode >= 0x80) && (opcode < 0xc0)) {
-            var operand = get_operand.call(this, opcode);
+            let operand = get_operand.call(this, opcode);
             const op_array = [this.do_add, this.do_adc, this.do_sub, this.do_sbc,
                 this.do_and, this.do_xor, this.do_or, this.do_cp];
             op_array[(opcode & 0x38) >>> 3].call(this, operand);
         }
         else {
-            var func = this.instructions[opcode].bind(this);
+            let func = this.instructions[opcode].bind(this);
             func();
         }
         this.cycle_counter += this.cycle_counts[opcode];
@@ -1160,7 +1204,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.flags.X = (result & 0x08) >>> 3;
     };
     Z80.prototype.get_parity = function (value) {
-        var parity_bits = [
+        let parity_bits = [
             1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
             0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
             0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
@@ -1187,7 +1231,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.core.mem_write(this.sp, operand & 0x00ff);
     };
     Z80.prototype.pop_word = function () {
-        var retval = this.core.mem_read(this.sp) & 0xff;
+        let retval = this.core.mem_read(this.sp) & 0xff;
         this.sp = (this.sp + 1) & 0xffff;
         retval |= this.core.mem_read(this.sp) << 8;
         this.sp = (this.sp + 1) & 0xffff;
@@ -1206,7 +1250,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     Z80.prototype.do_conditional_relative_jump = function (condition) {
         if (condition) {
             this.cycle_counter += 5;
-            var offset = this.get_signed_offset_byte(this.core.mem_read((this.pc + 1) & 0xffff));
+            let offset = this.get_signed_offset_byte(this.core.mem_read((this.pc + 1) & 0xffff));
             this.pc = (this.pc + offset + 1) & 0xffff;
         }
         else {
@@ -1236,7 +1280,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.pc = (address - 1) & 0xffff;
     };
     Z80.prototype.do_add = function (operand) {
-        var result = this.a + operand;
+        let result = this.a + operand;
         this.flags.S = (result & 0x80) ? 1 : 0;
         this.flags.Z = !(result & 0xff) ? 1 : 0;
         this.flags.H = (((operand & 0x0f) + (this.a & 0x0f)) & 0x10) ? 1 : 0;
@@ -1247,7 +1291,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.update_xy_flags(this.a);
     };
     Z80.prototype.do_adc = function (operand) {
-        var result = this.a + operand + this.flags.C;
+        let result = this.a + operand + this.flags.C;
         this.flags.S = (result & 0x80) ? 1 : 0;
         this.flags.Z = !(result & 0xff) ? 1 : 0;
         this.flags.H = (((operand & 0x0f) + (this.a & 0x0f) + this.flags.C) & 0x10) ? 1 : 0;
@@ -1258,7 +1302,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.update_xy_flags(this.a);
     };
     Z80.prototype.do_sub = function (operand) {
-        var result = this.a - operand;
+        let result = this.a - operand;
         this.flags.S = (result & 0x80) ? 1 : 0;
         this.flags.Z = !(result & 0xff) ? 1 : 0;
         this.flags.H = (((this.a & 0x0f) - (operand & 0x0f)) & 0x10) ? 1 : 0;
@@ -1269,7 +1313,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.update_xy_flags(this.a);
     };
     Z80.prototype.do_sbc = function (operand) {
-        var result = this.a - operand - this.flags.C;
+        let result = this.a - operand - this.flags.C;
         this.flags.S = (result & 0x80) ? 1 : 0;
         this.flags.Z = !(result & 0xff) ? 1 : 0;
         this.flags.H = (((this.a & 0x0f) - (operand & 0x0f) - this.flags.C) & 0x10) ? 1 : 0;
@@ -1280,7 +1324,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.update_xy_flags(this.a);
     };
     Z80.prototype.do_cp = function (operand) {
-        var temp = this.a;
+        let temp = this.a;
         this.do_sub(operand);
         this.a = temp;
         this.update_xy_flags(operand);
@@ -1316,7 +1360,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.update_xy_flags(this.a);
     };
     Z80.prototype.do_inc = function (operand) {
-        var result = operand + 1;
+        let result = operand + 1;
         this.flags.S = (result & 0x80) ? 1 : 0;
         this.flags.Z = !(result & 0xff) ? 1 : 0;
         this.flags.H = ((operand & 0x0f) === 0x0f) ? 1 : 0;
@@ -1327,7 +1371,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         return result;
     };
     Z80.prototype.do_dec = function (operand) {
-        var result = operand - 1;
+        let result = operand - 1;
         this.flags.S = (result & 0x80) ? 1 : 0;
         this.flags.Z = !(result & 0xff) ? 1 : 0;
         this.flags.H = ((operand & 0x0f) === 0x00) ? 1 : 0;
@@ -1338,7 +1382,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         return result;
     };
     Z80.prototype.do_hl_add = function (operand) {
-        var hl = this.l | (this.h << 8), result = hl + operand;
+        let hl = this.l | (this.h << 8), result = hl + operand;
         this.flags.N = 0;
         this.flags.C = (result & 0x10000) ? 1 : 0;
         this.flags.H = (((hl & 0x0fff) + (operand & 0x0fff)) & 0x1000) ? 1 : 0;
@@ -1348,7 +1392,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.do_hl_adc = function (operand) {
         operand += this.flags.C;
-        var hl = this.l | (this.h << 8), result = hl + operand;
+        let hl = this.l | (this.h << 8), result = hl + operand;
         this.flags.S = (result & 0x8000) ? 1 : 0;
         this.flags.Z = !(result & 0xffff) ? 1 : 0;
         this.flags.H = (((hl & 0x0fff) + (operand & 0x0fff)) & 0x1000) ? 1 : 0;
@@ -1361,7 +1405,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.do_hl_sbc = function (operand) {
         operand += this.flags.C;
-        var hl = this.l | (this.h << 8), result = hl - operand;
+        let hl = this.l | (this.h << 8), result = hl - operand;
         this.flags.S = (result & 0x8000) ? 1 : 0;
         this.flags.Z = !(result & 0xffff) ? 1 : 0;
         this.flags.H = (((hl & 0x0fff) - (operand & 0x0fff)) & 0x1000) ? 1 : 0;
@@ -1373,7 +1417,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.update_xy_flags(this.h);
     };
     Z80.prototype.do_in = function (port) {
-        var result = this.core.io_read(port);
+        let result = this.core.io_read(port);
         this.flags.S = (result & 0x80) ? 1 : 0;
         this.flags.Z = result ? 0 : 1;
         this.flags.H = 0;
@@ -1396,9 +1440,9 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.update_xy_flags(this.a);
     };
     Z80.prototype.do_ldi = function () {
-        var read_value = this.core.mem_read(this.l | (this.h << 8));
+        let read_value = this.core.mem_read(this.l | (this.h << 8));
         this.core.mem_write(this.e | (this.d << 8), read_value);
-        var result = (this.e | (this.d << 8)) + 1;
+        let result = (this.e | (this.d << 8)) + 1;
         this.e = result & 0xff;
         this.d = (result & 0xff00) >>> 8;
         result = (this.l | (this.h << 8)) + 1;
@@ -1414,13 +1458,13 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.flags.X = ((this.a + read_value) & 0x08) >>> 3;
     };
     Z80.prototype.do_cpi = function () {
-        var temp_carry = this.flags.C;
-        var read_value = this.core.mem_read(this.l | (this.h << 8));
+        let temp_carry = this.flags.C;
+        let read_value = this.core.mem_read(this.l | (this.h << 8));
         this.do_cp(read_value);
         this.flags.C = temp_carry;
         this.flags.Y = ((this.a - read_value - this.flags.H) & 0x02) >>> 1;
         this.flags.X = ((this.a - read_value - this.flags.H) & 0x08) >>> 3;
-        var result = (this.l | (this.h << 8)) + 1;
+        let result = (this.l | (this.h << 8)) + 1;
         this.l = result & 0xff;
         this.h = (result & 0xff00) >>> 8;
         result = (this.c | (this.b << 8)) - 1;
@@ -1431,14 +1475,14 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     Z80.prototype.do_ini = function () {
         this.b = this.do_dec(this.b);
         this.core.mem_write(this.l | (this.h << 8), this.core.io_read((this.b << 8) | this.c));
-        var result = (this.l | (this.h << 8)) + 1;
+        let result = (this.l | (this.h << 8)) + 1;
         this.l = result & 0xff;
         this.h = (result & 0xff00) >>> 8;
         this.flags.N = 1;
     };
     Z80.prototype.do_outi = function () {
         this.core.io_write((this.b << 8) | this.c, this.core.mem_read(this.l | (this.h << 8)));
-        var result = (this.l | (this.h << 8)) + 1;
+        let result = (this.l | (this.h << 8)) + 1;
         this.l = result & 0xff;
         this.h = (result & 0xff00) >>> 8;
         this.b = this.do_dec(this.b);
@@ -1447,9 +1491,9 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     Z80.prototype.do_ldd = function () {
         this.flags.N = 0;
         this.flags.H = 0;
-        var read_value = this.core.mem_read(this.l | (this.h << 8));
+        let read_value = this.core.mem_read(this.l | (this.h << 8));
         this.core.mem_write(this.e | (this.d << 8), read_value);
-        var result = (this.e | (this.d << 8)) - 1;
+        let result = (this.e | (this.d << 8)) - 1;
         this.e = result & 0xff;
         this.d = (result & 0xff00) >>> 8;
         result = (this.l | (this.h << 8)) - 1;
@@ -1463,13 +1507,13 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.flags.X = ((this.a + read_value) & 0x08) >>> 3;
     };
     Z80.prototype.do_cpd = function () {
-        var temp_carry = this.flags.C;
-        var read_value = this.core.mem_read(this.l | (this.h << 8));
+        let temp_carry = this.flags.C;
+        let read_value = this.core.mem_read(this.l | (this.h << 8));
         this.do_cp(read_value);
         this.flags.C = temp_carry;
         this.flags.Y = ((this.a - read_value - this.flags.H) & 0x02) >>> 1;
         this.flags.X = ((this.a - read_value - this.flags.H) & 0x08) >>> 3;
-        var result = (this.l | (this.h << 8)) - 1;
+        let result = (this.l | (this.h << 8)) - 1;
         this.l = result & 0xff;
         this.h = (result & 0xff00) >>> 8;
         result = (this.c | (this.b << 8)) - 1;
@@ -1480,14 +1524,14 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     Z80.prototype.do_ind = function () {
         this.b = this.do_dec(this.b);
         this.core.mem_write(this.l | (this.h << 8), this.core.io_read((this.b << 8) | this.c));
-        var result = (this.l | (this.h << 8)) - 1;
+        let result = (this.l | (this.h << 8)) - 1;
         this.l = result & 0xff;
         this.h = (result & 0xff00) >>> 8;
         this.flags.N = 1;
     };
     Z80.prototype.do_outd = function () {
         this.core.io_write((this.b << 8) | this.c, this.core.mem_read(this.l | (this.h << 8)));
-        var result = (this.l | (this.h << 8)) - 1;
+        let result = (this.l | (this.h << 8)) - 1;
         this.l = result & 0xff;
         this.h = (result & 0xff00) >>> 8;
         this.b = this.do_dec(this.b);
@@ -1518,7 +1562,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     Z80.prototype.do_rl = function (operand) {
         this.flags.N = 0;
         this.flags.H = 0;
-        var temp = this.flags.C;
+        let temp = this.flags.C;
         this.flags.C = (operand & 0x80) >>> 7;
         operand = ((operand << 1) | temp) & 0xff;
         this.flags.Z = !operand ? 1 : 0;
@@ -1530,7 +1574,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     Z80.prototype.do_rr = function (operand) {
         this.flags.N = 0;
         this.flags.H = 0;
-        var temp = this.flags.C;
+        let temp = this.flags.C;
         this.flags.C = operand & 1;
         operand = ((operand >>> 1) & 0x7f) | (temp << 7);
         this.flags.Z = !operand ? 1 : 0;
@@ -1585,7 +1629,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.do_ix_add = function (operand) {
         this.flags.N = 0;
-        var result = this.ix + operand;
+        let result = this.ix + operand;
         this.flags.C = (result & 0x10000) ? 1 : 0;
         this.flags.H = (((this.ix & 0xfff) + (operand & 0xfff)) & 0x1000) ? 1 : 0;
         this.update_xy_flags((result & 0xff00) >>> 8);
@@ -1603,7 +1647,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.core.mem_write(this.c | (this.b << 8), this.a);
     };
     Z80.prototype.instructions[0x03] = function () {
-        var result = (this.c | (this.b << 8));
+        let result = (this.c | (this.b << 8));
         result += 1;
         this.c = result & 0xff;
         this.b = (result & 0xff00) >>> 8;
@@ -1619,14 +1663,14 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.b = this.core.mem_read(this.pc);
     };
     Z80.prototype.instructions[0x07] = function () {
-        var temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
+        let temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
         this.a = this.do_rlc(this.a);
         this.flags.S = temp_s;
         this.flags.Z = temp_z;
         this.flags.P = temp_p;
     };
     Z80.prototype.instructions[0x08] = function () {
-        var temp = this.a;
+        let temp = this.a;
         this.a = this.a_prime;
         this.a_prime = temp;
         temp = this.get_flags_register();
@@ -1640,7 +1684,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.a = this.core.mem_read(this.c | (this.b << 8));
     };
     Z80.prototype.instructions[0x0b] = function () {
-        var result = (this.c | (this.b << 8));
+        let result = (this.c | (this.b << 8));
         result -= 1;
         this.c = result & 0xff;
         this.b = (result & 0xff00) >>> 8;
@@ -1656,7 +1700,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.c = this.core.mem_read(this.pc);
     };
     Z80.prototype.instructions[0x0f] = function () {
-        var temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
+        let temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
         this.a = this.do_rrc(this.a);
         this.flags.S = temp_s;
         this.flags.Z = temp_z;
@@ -1676,7 +1720,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.core.mem_write(this.e | (this.d << 8), this.a);
     };
     Z80.prototype.instructions[0x13] = function () {
-        var result = (this.e | (this.d << 8));
+        let result = (this.e | (this.d << 8));
         result += 1;
         this.e = result & 0xff;
         this.d = (result & 0xff00) >>> 8;
@@ -1692,14 +1736,14 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.d = this.core.mem_read(this.pc);
     };
     Z80.prototype.instructions[0x17] = function () {
-        var temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
+        let temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
         this.a = this.do_rl(this.a);
         this.flags.S = temp_s;
         this.flags.Z = temp_z;
         this.flags.P = temp_p;
     };
     Z80.prototype.instructions[0x18] = function () {
-        var offset = this.get_signed_offset_byte(this.core.mem_read((this.pc + 1) & 0xffff));
+        let offset = this.get_signed_offset_byte(this.core.mem_read((this.pc + 1) & 0xffff));
         this.pc = (this.pc + offset + 1) & 0xffff;
     };
     Z80.prototype.instructions[0x19] = function () {
@@ -1709,7 +1753,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.a = this.core.mem_read(this.e | (this.d << 8));
     };
     Z80.prototype.instructions[0x1b] = function () {
-        var result = (this.e | (this.d << 8));
+        let result = (this.e | (this.d << 8));
         result -= 1;
         this.e = result & 0xff;
         this.d = (result & 0xff00) >>> 8;
@@ -1725,7 +1769,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.e = this.core.mem_read(this.pc);
     };
     Z80.prototype.instructions[0x1f] = function () {
-        var temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
+        let temp_s = this.flags.S, temp_z = this.flags.Z, temp_p = this.flags.P;
         this.a = this.do_rr(this.a);
         this.flags.S = temp_s;
         this.flags.Z = temp_z;
@@ -1742,14 +1786,14 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.instructions[0x22] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var address = this.core.mem_read(this.pc);
+        let address = this.core.mem_read(this.pc);
         this.pc = (this.pc + 1) & 0xffff;
         address |= this.core.mem_read(this.pc) << 8;
         this.core.mem_write(address, this.l);
         this.core.mem_write((address + 1) & 0xffff, this.h);
     };
     Z80.prototype.instructions[0x23] = function () {
-        var result = (this.l | (this.h << 8));
+        let result = (this.l | (this.h << 8));
         result += 1;
         this.l = result & 0xff;
         this.h = (result & 0xff00) >>> 8;
@@ -1765,7 +1809,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.h = this.core.mem_read(this.pc);
     };
     Z80.prototype.instructions[0x27] = function () {
-        var temp = this.a;
+        let temp = this.a;
         if (!this.flags.N) {
             if (this.flags.H || ((this.a & 0x0f) > 9))
                 temp += 0x06;
@@ -1794,14 +1838,14 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.instructions[0x2a] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var address = this.core.mem_read(this.pc);
+        let address = this.core.mem_read(this.pc);
         this.pc = (this.pc + 1) & 0xffff;
         address |= this.core.mem_read(this.pc) << 8;
         this.l = this.core.mem_read(address);
         this.h = this.core.mem_read((address + 1) & 0xffff);
     };
     Z80.prototype.instructions[0x2b] = function () {
-        var result = (this.l | (this.h << 8));
+        let result = (this.l | (this.h << 8));
         result -= 1;
         this.l = result & 0xff;
         this.h = (result & 0xff00) >>> 8;
@@ -1832,7 +1876,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.instructions[0x32] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var address = this.core.mem_read(this.pc);
+        let address = this.core.mem_read(this.pc);
         this.pc = (this.pc + 1) & 0xffff;
         address |= this.core.mem_read(this.pc) << 8;
         this.core.mem_write(address, this.a);
@@ -1841,11 +1885,11 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.sp = (this.sp + 1) & 0xffff;
     };
     Z80.prototype.instructions[0x34] = function () {
-        var address = this.l | (this.h << 8);
+        let address = this.l | (this.h << 8);
         this.core.mem_write(address, this.do_inc(this.core.mem_read(address)));
     };
     Z80.prototype.instructions[0x35] = function () {
-        var address = this.l | (this.h << 8);
+        let address = this.l | (this.h << 8);
         this.core.mem_write(address, this.do_dec(this.core.mem_read(address)));
     };
     Z80.prototype.instructions[0x36] = function () {
@@ -1866,7 +1910,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.instructions[0x3a] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var address = this.core.mem_read(this.pc);
+        let address = this.core.mem_read(this.pc);
         this.pc = (this.pc + 1) & 0xffff;
         address |= this.core.mem_read(this.pc) << 8;
         this.a = this.core.mem_read(address);
@@ -1894,7 +1938,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.do_conditional_return(!this.flags.Z);
     };
     Z80.prototype.instructions[0xc1] = function () {
-        var result = this.pop_word();
+        let result = this.pop_word();
         this.c = result & 0xff;
         this.b = (result & 0xff00) >>> 8;
     };
@@ -1931,7 +1975,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     Z80.prototype.instructions[0xcb] = function () {
         this.r = (this.r & 0x80) | (((this.r & 0x7f) + 1) & 0x7f);
         this.pc = (this.pc + 1) & 0xffff;
-        var opcode = this.core.mem_read(this.pc), bit_number = (opcode & 0x38) >>> 3, reg_code = opcode & 0x07;
+        let opcode = this.core.mem_read(this.pc), bit_number = (opcode & 0x38) >>> 3, reg_code = opcode & 0x07;
         if (opcode < 0x40) {
             const op_array = [this.do_rlc, this.do_rrc, this.do_rl, this.do_rr,
                 this.do_sla, this.do_sra, this.do_sll, this.do_srl];
@@ -2034,7 +2078,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.do_conditional_return(!this.flags.C);
     };
     Z80.prototype.instructions[0xd1] = function () {
-        var result = this.pop_word();
+        let result = this.pop_word();
         this.e = result & 0xff;
         this.d = (result & 0xff00) >>> 8;
     };
@@ -2062,7 +2106,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.do_conditional_return(!!this.flags.C);
     };
     Z80.prototype.instructions[0xd9] = function () {
-        var temp = this.b;
+        let temp = this.b;
         this.b = this.b_prime;
         this.b_prime = temp;
         temp = this.c;
@@ -2094,7 +2138,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     Z80.prototype.instructions[0xdd] = function () {
         this.r = (this.r & 0x80) | (((this.r & 0x7f) + 1) & 0x7f);
         this.pc = (this.pc + 1) & 0xffff;
-        var opcode = this.core.mem_read(this.pc), func = this.dd_instructions[opcode];
+        let opcode = this.core.mem_read(this.pc), func = this.dd_instructions[opcode];
         if (func) {
             func = func.bind(this);
             func();
@@ -2116,7 +2160,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.do_conditional_return(!this.flags.P);
     };
     Z80.prototype.instructions[0xe1] = function () {
-        var result = this.pop_word();
+        let result = this.pop_word();
         this.l = result & 0xff;
         this.h = (result & 0xff00) >>> 8;
     };
@@ -2124,7 +2168,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.do_conditional_absolute_jump(!this.flags.P);
     };
     Z80.prototype.instructions[0xe3] = function () {
-        var temp = this.core.mem_read(this.sp);
+        let temp = this.core.mem_read(this.sp);
         this.core.mem_write(this.sp, this.l);
         this.l = temp;
         temp = this.core.mem_read((this.sp + 1) & 0xffff);
@@ -2155,7 +2199,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.do_conditional_absolute_jump(!!this.flags.P);
     };
     Z80.prototype.instructions[0xeb] = function () {
-        var temp = this.d;
+        let temp = this.d;
         this.d = this.h;
         this.h = temp;
         temp = this.e;
@@ -2168,7 +2212,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     Z80.prototype.instructions[0xed] = function () {
         this.r = (this.r & 0x80) | (((this.r & 0x7f) + 1) & 0x7f);
         this.pc = (this.pc + 1) & 0xffff;
-        var opcode = this.core.mem_read(this.pc), func = this.ed_instructions[opcode];
+        let opcode = this.core.mem_read(this.pc), func = this.ed_instructions[opcode];
         if (func) {
             func = func.bind(this);
             func();
@@ -2189,7 +2233,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.do_conditional_return(!this.flags.S);
     };
     Z80.prototype.instructions[0xf1] = function () {
-        var result = this.pop_word();
+        let result = this.pop_word();
         this.set_flags_register(result & 0xff);
         this.a = (result & 0xff00) >>> 8;
     };
@@ -2230,9 +2274,9 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     Z80.prototype.instructions[0xfd] = function () {
         this.r = (this.r & 0x80) | (((this.r & 0x7f) + 1) & 0x7f);
         this.pc = (this.pc + 1) & 0xffff;
-        var opcode = this.core.mem_read(this.pc), func = this.dd_instructions[opcode];
+        let opcode = this.core.mem_read(this.pc), func = this.dd_instructions[opcode];
         if (func) {
-            var temp = this.ix;
+            let temp = this.ix;
             this.ix = this.iy;
             func = func.bind(this);
             func();
@@ -2264,7 +2308,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.ed_instructions[0x43] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var address = this.core.mem_read(this.pc);
+        let address = this.core.mem_read(this.pc);
         this.pc = (this.pc + 1) & 0xffff;
         address |= this.core.mem_read(this.pc) << 8;
         this.core.mem_write(address, this.c);
@@ -2294,7 +2338,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.ed_instructions[0x4b] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var address = this.core.mem_read(this.pc);
+        let address = this.core.mem_read(this.pc);
         this.pc = (this.pc + 1) & 0xffff;
         address |= this.core.mem_read(this.pc) << 8;
         this.c = this.core.mem_read(address);
@@ -2323,7 +2367,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.ed_instructions[0x53] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var address = this.core.mem_read(this.pc);
+        let address = this.core.mem_read(this.pc);
         this.pc = (this.pc + 1) & 0xffff;
         address |= this.core.mem_read(this.pc) << 8;
         this.core.mem_write(address, this.e);
@@ -2354,7 +2398,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.ed_instructions[0x5b] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var address = this.core.mem_read(this.pc);
+        let address = this.core.mem_read(this.pc);
         this.pc = (this.pc + 1) & 0xffff;
         address |= this.core.mem_read(this.pc) << 8;
         this.e = this.core.mem_read(address);
@@ -2385,7 +2429,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.ed_instructions[0x63] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var address = this.core.mem_read(this.pc);
+        let address = this.core.mem_read(this.pc);
         this.pc = (this.pc + 1) & 0xffff;
         address |= this.core.mem_read(this.pc) << 8;
         this.core.mem_write(address, this.l);
@@ -2402,8 +2446,8 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.imode = 0;
     };
     Z80.prototype.ed_instructions[0x67] = function () {
-        var hl_value = this.core.mem_read(this.l | (this.h << 8));
-        var temp1 = hl_value & 0x0f, temp2 = this.a & 0x0f;
+        let hl_value = this.core.mem_read(this.l | (this.h << 8));
+        let temp1 = hl_value & 0x0f, temp2 = this.a & 0x0f;
         hl_value = ((hl_value & 0xf0) >>> 4) | (temp2 << 4);
         this.a = (this.a & 0xf0) | temp1;
         this.core.mem_write(this.l | (this.h << 8), hl_value);
@@ -2425,7 +2469,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.ed_instructions[0x6b] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var address = this.core.mem_read(this.pc);
+        let address = this.core.mem_read(this.pc);
         this.pc = (this.pc + 1) & 0xffff;
         address |= this.core.mem_read(this.pc) << 8;
         this.l = this.core.mem_read(address);
@@ -2442,8 +2486,8 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.imode = 0;
     };
     Z80.prototype.ed_instructions[0x6f] = function () {
-        var hl_value = this.core.mem_read(this.l | (this.h << 8));
-        var temp1 = hl_value & 0xf0, temp2 = this.a & 0x0f;
+        let hl_value = this.core.mem_read(this.l | (this.h << 8));
+        let temp1 = hl_value & 0xf0, temp2 = this.a & 0x0f;
         hl_value = ((hl_value & 0x0f) << 4) | temp2;
         this.a = (this.a & 0xf0) | (temp1 >>> 4);
         this.core.mem_write(this.l | (this.h << 8), hl_value);
@@ -2465,7 +2509,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.ed_instructions[0x73] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var address = this.core.mem_read(this.pc);
+        let address = this.core.mem_read(this.pc);
         this.pc = (this.pc + 1) & 0xffff;
         address |= this.core.mem_read(this.pc) << 8;
         this.core.mem_write(address, this.sp & 0xff);
@@ -2492,7 +2536,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.ed_instructions[0x7b] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var address = this.core.mem_read(this.pc);
+        let address = this.core.mem_read(this.pc);
         this.pc = (this.pc + 1) & 0xffff;
         address |= this.core.mem_read(this.pc) << 8;
         this.sp = this.core.mem_read(address);
@@ -2603,7 +2647,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x22] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var address = this.core.mem_read(this.pc);
+        let address = this.core.mem_read(this.pc);
         this.pc = (this.pc + 1) & 0xffff;
         address |= (this.core.mem_read(this.pc) << 8);
         this.core.mem_write(address, this.ix & 0xff);
@@ -2627,7 +2671,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x2a] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var address = this.core.mem_read(this.pc);
+        let address = this.core.mem_read(this.pc);
         this.pc = (this.pc + 1) & 0xffff;
         address |= (this.core.mem_read(this.pc) << 8);
         this.ix = this.core.mem_read(address);
@@ -2648,17 +2692,17 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x34] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc)), value = this.core.mem_read((offset + this.ix) & 0xffff);
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc)), value = this.core.mem_read((offset + this.ix) & 0xffff);
         this.core.mem_write((offset + this.ix) & 0xffff, this.do_inc(value));
     };
     Z80.prototype.dd_instructions[0x35] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc)), value = this.core.mem_read((offset + this.ix) & 0xffff);
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc)), value = this.core.mem_read((offset + this.ix) & 0xffff);
         this.core.mem_write((offset + this.ix) & 0xffff, this.do_dec(value));
     };
     Z80.prototype.dd_instructions[0x36] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.pc = (this.pc + 1) & 0xffff;
         this.core.mem_write((this.ix + offset) & 0xffff, this.core.mem_read(this.pc));
     };
@@ -2673,7 +2717,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x46] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.b = this.core.mem_read((this.ix + offset) & 0xffff);
     };
     Z80.prototype.dd_instructions[0x4c] = function () {
@@ -2684,7 +2728,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x4e] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.c = this.core.mem_read((this.ix + offset) & 0xffff);
     };
     Z80.prototype.dd_instructions[0x54] = function () {
@@ -2695,7 +2739,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x56] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.d = this.core.mem_read((this.ix + offset) & 0xffff);
     };
     Z80.prototype.dd_instructions[0x5c] = function () {
@@ -2706,7 +2750,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x5e] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.e = this.core.mem_read((this.ix + offset) & 0xffff);
     };
     Z80.prototype.dd_instructions[0x60] = function () {
@@ -2728,7 +2772,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x66] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.h = this.core.mem_read((this.ix + offset) & 0xffff);
     };
     Z80.prototype.dd_instructions[0x67] = function () {
@@ -2753,7 +2797,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x6e] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.l = this.core.mem_read((this.ix + offset) & 0xffff);
     };
     Z80.prototype.dd_instructions[0x6f] = function () {
@@ -2761,37 +2805,37 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x70] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.core.mem_write((this.ix + offset) & 0xffff, this.b);
     };
     Z80.prototype.dd_instructions[0x71] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.core.mem_write((this.ix + offset) & 0xffff, this.c);
     };
     Z80.prototype.dd_instructions[0x72] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.core.mem_write((this.ix + offset) & 0xffff, this.d);
     };
     Z80.prototype.dd_instructions[0x73] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.core.mem_write((this.ix + offset) & 0xffff, this.e);
     };
     Z80.prototype.dd_instructions[0x74] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.core.mem_write((this.ix + offset) & 0xffff, this.h);
     };
     Z80.prototype.dd_instructions[0x75] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.core.mem_write((this.ix + offset) & 0xffff, this.l);
     };
     Z80.prototype.dd_instructions[0x77] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.core.mem_write((this.ix + offset) & 0xffff, this.a);
     };
     Z80.prototype.dd_instructions[0x7c] = function () {
@@ -2802,7 +2846,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x7e] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.a = this.core.mem_read((this.ix + offset) & 0xffff);
     };
     Z80.prototype.dd_instructions[0x84] = function () {
@@ -2813,7 +2857,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x86] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.do_add(this.core.mem_read((this.ix + offset) & 0xffff));
     };
     Z80.prototype.dd_instructions[0x8c] = function () {
@@ -2824,7 +2868,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x8e] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.do_adc(this.core.mem_read((this.ix + offset) & 0xffff));
     };
     Z80.prototype.dd_instructions[0x94] = function () {
@@ -2835,7 +2879,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x96] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.do_sub(this.core.mem_read((this.ix + offset) & 0xffff));
     };
     Z80.prototype.dd_instructions[0x9c] = function () {
@@ -2846,7 +2890,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0x9e] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.do_sbc(this.core.mem_read((this.ix + offset) & 0xffff));
     };
     Z80.prototype.dd_instructions[0xa4] = function () {
@@ -2857,7 +2901,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0xa6] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.do_and(this.core.mem_read((this.ix + offset) & 0xffff));
     };
     Z80.prototype.dd_instructions[0xac] = function () {
@@ -2868,7 +2912,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0xae] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.do_xor(this.core.mem_read((this.ix + offset) & 0xffff));
     };
     Z80.prototype.dd_instructions[0xb4] = function () {
@@ -2879,7 +2923,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0xb6] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.do_or(this.core.mem_read((this.ix + offset) & 0xffff));
     };
     Z80.prototype.dd_instructions[0xbc] = function () {
@@ -2890,22 +2934,22 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     };
     Z80.prototype.dd_instructions[0xbe] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.do_cp(this.core.mem_read((this.ix + offset) & 0xffff));
     };
     Z80.prototype.dd_instructions[0xcb] = function () {
         this.pc = (this.pc + 1) & 0xffff;
-        var offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
+        let offset = this.get_signed_offset_byte(this.core.mem_read(this.pc));
         this.pc = (this.pc + 1) & 0xffff;
-        var opcode = this.core.mem_read(this.pc), value;
+        let opcode = this.core.mem_read(this.pc), value;
         if (opcode < 0x40) {
             const ddcb_functions = [this.do_rlc, this.do_rrc, this.do_rl, this.do_rr,
                 this.do_sla, this.do_sra, this.do_sll, this.do_srl];
-            var func = ddcb_functions[(opcode & 0x38) >>> 3], value = func.call(this, this.core.mem_read((this.ix + offset) & 0xffff));
+            let func = ddcb_functions[(opcode & 0x38) >>> 3], value = func.call(this, this.core.mem_read((this.ix + offset) & 0xffff));
             this.core.mem_write((this.ix + offset) & 0xffff, value);
         }
         else {
-            var bit_number = (opcode & 0x38) >>> 3;
+            let bit_number = (opcode & 0x38) >>> 3;
             if (opcode < 0x80) {
                 this.flags.N = 0;
                 this.flags.H = 1;
@@ -2944,7 +2988,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         this.ix = this.pop_word();
     };
     Z80.prototype.dd_instructions[0xe3] = function () {
-        var temp = this.ix;
+        let temp = this.ix;
         this.ix = this.core.mem_read(this.sp);
         this.ix |= this.core.mem_read((this.sp + 1) & 0xffff) << 8;
         this.core.mem_write(this.sp, temp & 0xff);
@@ -3079,7 +3123,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     exports.ExidyZ80 = ExidyZ80;
 });
 define("ExidyTapeUnitMotorControl", ["require", "exports"], function (require, exports) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class TapeUnitMotorControl {
         constructor(motorMask) {
@@ -3108,7 +3152,7 @@ define("ExidyTapeUnitMotorControl", ["require", "exports"], function (require, e
     exports.default = TapeUnitMotorControl;
 });
 define("ExidyTapeUnit", ["require", "exports"], function (require, exports) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class TapeUnit {
         constructor(motorControl) {
@@ -3132,7 +3176,7 @@ define("ExidyTapeUnit", ["require", "exports"], function (require, exports) {
     exports.default = TapeUnit;
 });
 define("ExidyTapeSystem", ["require", "exports", "ExidyTapeUnit", "ExidyTapeUnitMotorControl"], function (require, exports, ExidyTapeUnit_1, ExidyTapeUnitMotorControl_1) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class TapeSystemStatus {
         constructor(tapeUnits) {
@@ -3213,13 +3257,13 @@ define("ExidyTapeSystem", ["require", "exports", "ExidyTapeUnit", "ExidyTapeUnit
     exports.default = TapeSystem;
 });
 define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMemorySystem", "ExidyIo", "ExidyKeyboard", "ExidyArrayDisk", "ExidyDiskSystem", "ExidyTapeSystem", "ExidyArrayTape", "ExidyCentronicsSystem"], function (require, exports, ExidyZ80_1, DropZone_1, ExidyMemorySystem_1, ExidyIo_1, ExidyKeyboard_2, ExidyArrayDisk_1, ExidyDiskSystem_1, ExidyTapeSystem_1, ExidyArrayTape_1, ExidyCentronicsSystem_1) {
-    "use strict";
+    'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     const defaultRoms = [
-        { name: "exmo1-1.dat", address: 0xE000 },
-        { name: "exmo1-2.dat", address: 0xE800 },
-        { name: "exchr-1.dat", address: 0xF800 },
-        { name: "diskboot.dat", address: 0xBC00 }
+        { name: 'exmo1-1.dat', address: 0xE000 },
+        { name: 'exmo1-2.dat', address: 0xE800 },
+        { name: 'exchr-1.dat', address: 0xF800 },
+        { name: 'diskboot.dat', address: 0xBC00 }
     ];
     const CYCLES_PER_DISK_TICK = 100000;
     class ExidySorcerer {

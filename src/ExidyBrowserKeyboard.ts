@@ -101,6 +101,7 @@ const KEY_CONFIG: Array<KeyConfig> = [
     new KeyConfig('Repeat', 1, 1, 119, ['F8'] ),
     new KeyConfig('^', 11, 3, 163, ['^'] ), // ^~
     new KeyConfig('-', 11, 4, 173, ['-'] ),
+    new KeyConfig('-', 11, 4, 189, ['-'] ),
     new KeyConfig(',', 8, 0, 188, [','] ),
     new KeyConfig('.', 9, 1, 190, ['.'] ),
     new KeyConfig('/', 9, 0, 191, ['/'] ),
@@ -160,6 +161,7 @@ export default class BrowserKeyboard extends Keyboard {
 
     public browserKeyDown(key: number): void {
         const mapping = this._keyCodeToConfig[key];
+        console.log(key + ' ' + JSON.stringify(mapping));
         if (mapping) {
             this._keyboard.press(mapping.row, mapping.col);
         }

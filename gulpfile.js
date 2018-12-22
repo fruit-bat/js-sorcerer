@@ -6,15 +6,17 @@ var browserSync = require('browser-sync');
 var livereload = require('gulp-livereload');
 var target = 'docs';
 
-gulp.task('copy', function() {
+gulp.task('copy', function(done) {
   gulp.src(['**/*.html'], {cwd: 'src'})
    .pipe(gulp.dest(target));
 
   gulp.src(['**/*'], {cwd: 'assets'})
    .pipe(gulp.dest(target));
 
-   gulp.src(['**/*.js'], {cwd: 'src'})
+  gulp.src(['**/*.js'], {cwd: 'src'})
     .pipe(gulp.dest(target));
+    
+  done();
 });
 
 gulp.task("tsify", function () {
@@ -23,18 +25,20 @@ gulp.task("tsify", function () {
         .js.pipe(gulp.dest(target));
 });
 
-gulp.task("build", ['copy', 'tsify']);
+gulp.task("build", gulp.parallel('copy', 'tsify'));
 
-gulp.task("default", ["build"]);
+gulp.task("default", gulp.series("build"));
 
 gulp.task('watch', function () {
-   gulp.watch(['src/**/*', 'assets/**/*', 'tsconfig.tson', 'gulpfile.js'], ['build']);
+   gulp.watch(
+   ['src/**/*', 'assets/**/*', 'tsconfig.tson', 'gulpfile.js'], 
+   gulp.series('build'));
 });
 
 var reload = browserSync.reload;
 
 // watch files for changes and reload
-gulp.task('serve', ['watch'], function() {
+gulp.task('serve', gulp.parallel('watch', function() {
   livereload.listen(1234);
 
   browserSync({
@@ -45,4 +49,4 @@ gulp.task('serve', ['watch'], function() {
   });
 
   gulp.watch(['**/*'], {cwd: target}, reload);
-});
+}));
