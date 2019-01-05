@@ -2,7 +2,7 @@
   "name": "js-sorcerer",
   "version": "0.0.1",
   "description": "An Exidy Sorcerer emulator written in JavaScript",
-  "main": "index.js",
+  "main": "docs/index.js",
   "directories": {
     "test": "tests"
   },

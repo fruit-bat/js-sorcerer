@@ -1,7 +1,7 @@
 'use strict';
 
 import ExidyDisk from './ExidyDisk';
-import { SECTORS_PER_TRACK, NUMBER_OF_TRACKS, BYTES_PER_SECTOR } from './ExidyDisk';
+import { SECTORS_PER_TRACK, NUMBER_OF_TRACKS, BYTES_PER_SECTOR } from './ExidyDiskConsts';
 
 export default class ExidyArrayDisk implements ExidyDisk {
 

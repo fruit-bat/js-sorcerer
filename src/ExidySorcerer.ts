@@ -8,6 +8,7 @@ import { IoSystem } from './ExidyIo';
 import Keyboard from './ExidyKeyboard';
 import ExidyArrayDisk from './ExidyArrayDisk';
 import ExidyDiskSystem from './ExidyDiskSystem';
+import ExidyDisk from './ExidyDisk';
 import TapeSystem from './ExidyTapeSystem';
 import ArrayTape from './ExidyArrayTape';
 import Centronics from './ExidyCentronics';
@@ -86,6 +87,12 @@ export default class ExidySorcerer {
         this.memorySystem.updateCharacters();
         this.memorySystem.updateScreen();
         this.cpu.load(data);
+    }
+    
+    public obtainDiskSystem(): Promise<ExidyDiskSystem> {
+      return this.ready.then(() => {
+        return this.diskSystem;
+      });
     }
 
     public load(snap: string): void {
