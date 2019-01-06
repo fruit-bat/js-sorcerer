@@ -7,6 +7,7 @@ export default class ElementPrinter implements Centronics {
 	private _element : HTMLElement;
 	private _rowElement : HTMLElement;
   private _oddEven : Boolean = false;
+  private _autoScroll : Boolean = true;
 
 	private _encodeHTMLmap : any = {
 		"&" : "&amp;",
@@ -17,8 +18,8 @@ export default class ElementPrinter implements Centronics {
 	};
 
 	constructor(element : HTMLElement) {
-		this._element = element;
-    this.addRow();
+    this._element = element;
+		this.clear();
 	}
 
 	readByte() : number {
@@ -43,7 +44,16 @@ export default class ElementPrinter implements Centronics {
     this._oddEven = !this._oddEven;
   }
 
-	private escape(char: string) {
+  public clear() {
+		this._element.innerHTML = '';;
+    for(let i=0; i < 20; ++i) this.addRow();
+  }
+
+  public setAutoScroll(autoScroll : Boolean) {
+    this._autoScroll = autoScroll;
+  }
+
+	private escape(char: string) : void {
 		let r = this._encodeHTMLmap.char;
 		return r ? r : char;
 	}
@@ -55,7 +65,9 @@ export default class ElementPrinter implements Centronics {
 			if(char === 0x0a) return;
       if(char === 0x0d) {
         this.addRow();
-        this._element.scrollTop = this._element.scrollHeight;
+        if(this._autoScroll) {
+          this._element.scrollTop = this._element.scrollHeight;
+        }
       }
       else {
         this._rowElement.innerHTML += this.escape(String.fromCharCode(char));

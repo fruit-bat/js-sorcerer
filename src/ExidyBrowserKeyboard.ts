@@ -68,6 +68,7 @@ const KEY_CONFIG: Array<KeyConfig> = [
     new KeyConfig('8', 8, 4, 56, ['8']),
     new KeyConfig('9', 8, 3, 57, ['9']),
     new KeyConfig(';', 9, 2, 59, [';']),
+    new KeyConfig(';', 9, 2, 186, [';']),
 
     new KeyConfig('A', 2, 2, 65, ['a', 'A']),
     new KeyConfig('B', 5, 0, 66, ['b', 'B']),
