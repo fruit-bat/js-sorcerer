@@ -5,6 +5,8 @@ import Centronics from './ExidyCentronics'
 export default class ElementPrinter implements Centronics {
 
 	private _element : HTMLElement;
+	private _rowElement : HTMLElement;
+  private _oddEven : Boolean = false;
 
 	private _encodeHTMLmap : any = {
 		"&" : "&amp;",
@@ -16,11 +18,30 @@ export default class ElementPrinter implements Centronics {
 
 	constructor(element : HTMLElement) {
 		this._element = element;
+    this.addRow();
 	}
 
 	readByte() : number {
 		return 0x7f;
 	}
+
+  private createHole() : HTMLElement {
+    const hole = document.createElement('div');
+    hole.className = 'hole';
+    return hole;
+  }
+
+  private addRow() {
+    const holeRowHole = document.createElement('div');
+    holeRowHole.classList.add('row');
+    this._rowElement = document.createElement('pre');
+    holeRowHole.classList.add(this._oddEven ? 'odd' : 'even');
+    holeRowHole.appendChild(this.createHole());
+    holeRowHole.appendChild(this._rowElement);
+    holeRowHole.appendChild(this.createHole());
+    this._element.appendChild(holeRowHole);
+    this._oddEven = !this._oddEven;
+  }
 
 	private escape(char: string) {
 		let r = this._encodeHTMLmap.char;
@@ -31,8 +52,14 @@ export default class ElementPrinter implements Centronics {
 		let clock = (data & 0x80) != 0;
 		if(!clock) {
 			let char = data & 0x7f;
-			if(char == 0x0a) return;
-			this._element.innerHTML += this.escape(String.fromCharCode(char));
+			if(char === 0x0a) return;
+      if(char === 0x0d) {
+        this.addRow();
+        this._element.scrollTop = this._element.scrollHeight;
+      }
+      else {
+        this._rowElement.innerHTML += this.escape(String.fromCharCode(char));
+      }
 		}
 	}
 }

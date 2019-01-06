@@ -3,7 +3,7 @@
 import ExidyDisk from './ExidyDisk';
 import { SECTORS_PER_TRACK, NUMBER_OF_TRACKS, BYTES_PER_SECTOR } from './ExidyDiskConsts';
 
-const ACTIVE_FOR_TICKS = 800;
+const ACTIVE_FOR_TICKS = 400;
 
 export default class ExidyDiskDrive {
 
