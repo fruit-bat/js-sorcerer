@@ -78,7 +78,11 @@ export default class ExidySorcerer {
         return this.memorySystem.screenCanvas;
     }
 
-    private loadRomFromArray(data: Uint8Array): void {
+    public ejectRom(): void {
+      this.memorySystem.ejectRom(0xc000, 0x2000);
+    }
+
+    public loadRomFromArray(data: Uint8Array): void {
         this.memorySystem.loadRom(data, 0xC000);
     }
 
@@ -88,7 +92,7 @@ export default class ExidySorcerer {
         this.memorySystem.updateScreen();
         this.cpu.load(data);
     }
-    
+
     public obtainDiskSystem(): Promise<ExidyDiskSystem> {
       return this.ready.then(() => {
         return this.diskSystem;

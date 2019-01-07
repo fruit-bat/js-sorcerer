@@ -42,13 +42,13 @@ export default class MemorySystem {
     private exidyScreen: ExidyScreen;
 
     public constructor() {
-    
+
         this.multplexor.setHandler(0, MEMORY_SIZE_IN_BYTES, this.ram);
 
         this.multplexor.setHandler(0xF800, 0xFE00 - 0xF800, this.rom);
 
         const charsCanvas = <HTMLCanvasElement>document.createElement('canvas');
-        
+
         charsCanvas.width = 2048;
         charsCanvas.height = 8;
 
@@ -72,6 +72,11 @@ export default class MemorySystem {
     public loadRom(data: Uint8Array, address: number): void {
         this._memory.set(data, address);
         this.multplexor.setHandler(address, data.length, this.rom);
+    }
+
+    public ejectRom(address: number, length: number): void {
+        this.multplexor.setHandler(address, length, this.ram);
+        this._memory.fill(255, address, address + length);
     }
 
     public get memory(): Memory {
