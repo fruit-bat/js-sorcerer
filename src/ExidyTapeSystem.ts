@@ -117,4 +117,8 @@ export default class TapeSystem {
     public get units(): Array<TapeUnit> {
         return this._tapeUnits;
     }
+
+    public getUnit(unit : number): TapeUnit {
+        return this._tapeUnits[unit];
+    }
 }

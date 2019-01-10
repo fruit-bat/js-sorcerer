@@ -124,6 +124,12 @@ export default class ExidySorcerer {
         });
     }
 
+    public obtainTapeSystem(): Promise<TapeSystem> {
+      return this.ready.then(() => {
+        return this.typeSystem;
+      });
+    }
+
     public loadTape(unit: number, file: string): void {
         this.ready = this.ready.then(() => {
             return this.filesystem.read('tapes/' + file).then((data) => {
