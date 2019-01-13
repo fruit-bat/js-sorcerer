@@ -8,6 +8,7 @@ export default class ElementPrinter implements Centronics {
 	private _rowElement : HTMLElement;
   private _oddEven : Boolean = false;
   private _autoScroll : Boolean = true;
+  private _plain : string = '';
 
 	private _encodeHTMLmap : any = {
 		"&" : "&amp;",
@@ -16,6 +17,15 @@ export default class ElementPrinter implements Centronics {
 		"<" : "&lt;",
 		">" : "&gt;"
 	};
+
+  private _htmlUnescape(str : String) : String {
+    return str
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&');
+  }
 
 	constructor(element : HTMLElement) {
     this._element = element;
@@ -45,7 +55,8 @@ export default class ElementPrinter implements Centronics {
   }
 
   public clear() {
-		this._element.innerHTML = '';;
+		this._element.innerHTML = '';
+    this._plain = '';
     for(let i=0; i < 20; ++i) this.addRow();
   }
 
@@ -62,6 +73,8 @@ export default class ElementPrinter implements Centronics {
 		let clock = (data & 0x80) != 0;
 		if(!clock) {
 			let char = data & 0x7f;
+      const c = String.fromCharCode(char);
+      this._plain += c;
 			if(char === 0x0a) return;
       if(char === 0x0d) {
         this.addRow();
@@ -70,8 +83,12 @@ export default class ElementPrinter implements Centronics {
         }
       }
       else {
-        this._rowElement.innerHTML += this.escape(String.fromCharCode(char));
+        this._rowElement.innerHTML += this.escape(c);
       }
 		}
 	}
+
+  getText() : string {
+    return this._plain;
+  }
 }

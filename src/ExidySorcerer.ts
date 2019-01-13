@@ -35,6 +35,7 @@ export default class ExidySorcerer {
     private typeSystem = new TapeSystem();
     private centronicsSystem = new CentronicsSystem();
     private _keyboard = new Keyboard();
+    private _govern: Boolean = true;
 
     public constructor(
         filesystem: ExidyFile) {
@@ -142,6 +143,11 @@ export default class ExidySorcerer {
         this.centronicsSystem.device = device;
     }
 
+    public set govern(govern: Boolean) {
+      console.log('govern: ' + govern);
+      this._govern = govern;
+    }
+
     public reset(): void {
         this.cycles = 0;
         this.cpu.reset(0xE000);
@@ -171,23 +177,35 @@ export default class ExidySorcerer {
         }, d);
         this.ready.then(() => {
             setInterval(() => {
-                t += g * 2000 - c;
-                c = 0;
-                if (t > 100000 && d > 0) {
-                    d -= 1;
-                    t = 0;
-                    clearInterval(interval);
-                    interval = setInterval(() => {
-                        c += this.step();
-                    }, d);
+                if (this._govern) {
+                  t += g * 2000 - c;
+                  c = 0;
+                  if (t > 100000 && d > 0) {
+                      d -= 1;
+                      t = 0;
+                      clearInterval(interval);
+                      interval = setInterval(() => {
+                          c += this.step();
+                      }, d);
+                  }
+                  else if (t < -100000) {
+                      d += 1;
+                      t = 0;
+                      clearInterval(interval);
+                      interval = setInterval(() => {
+                          c += this.step();
+                      }, d);
+                  }
                 }
-                else if (t < -100000) {
-                    d += 1;
-                    t = 0;
-                    clearInterval(interval);
-                    interval = setInterval(() => {
-                        c += this.step();
-                    }, d);
+                else {
+                  t = 0; c = 0;
+                  if (d > 0) {
+                      d = 0;
+                      clearInterval(interval);
+                      interval = setInterval(() => {
+                          c += this.step();
+                      }, d);
+                  }
                 }
             }, g);
         });

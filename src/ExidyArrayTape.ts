@@ -20,7 +20,7 @@ export default class ArrayTape implements Tape {
     }
 
     writeByte(baud: number, data: number):  void {
-        // TODO
+      this._data[this._index++] = data;
     }
 }
 
