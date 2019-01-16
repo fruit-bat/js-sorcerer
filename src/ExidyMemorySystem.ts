@@ -94,4 +94,8 @@ export default class MemorySystem {
     public setHandler(address: number, length: number, handler: Memory): void {
         this.multplexor.setHandler(address, length, handler);
     }
+
+    public getMem(start, length): Uint8Array {
+      return this._memory.subarray(start, start+length);
+    }
 }

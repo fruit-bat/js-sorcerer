@@ -148,6 +148,10 @@ export default class ExidySorcerer {
       this._govern = govern;
     }
 
+    public getMem(start, length): Uint8Array {
+      return this.memorySystem.getMem(start, length);
+    }
+
     public reset(): void {
         this.cycles = 0;
         this.cpu.reset(0xE000);
