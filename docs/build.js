@@ -63,11 +63,15 @@ define("DropZone", ["require", "exports"], function (require, exports) {
 define("ExidyDisk", ["require", "exports"], function (require, exports) {
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
+});
+define("ExidyDiskConsts", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
     exports.SECTORS_PER_TRACK = 16;
     exports.NUMBER_OF_TRACKS = 77;
     exports.BYTES_PER_SECTOR = 256 + 14;
 });
-define("ExidyArrayDisk", ["require", "exports", "ExidyDisk"], function (require, exports, ExidyDisk_1) {
+define("ExidyArrayDisk", ["require", "exports", "ExidyDiskConsts"], function (require, exports, ExidyDiskConsts_1) {
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class ExidyArrayDisk {
@@ -75,7 +79,7 @@ define("ExidyArrayDisk", ["require", "exports", "ExidyDisk"], function (require,
             this._data = data;
         }
         toIndex(track, sector, offset) {
-            return (sector * ExidyDisk_1.BYTES_PER_SECTOR) + (track * ExidyDisk_1.SECTORS_PER_TRACK * ExidyDisk_1.BYTES_PER_SECTOR) + offset;
+            return (sector * ExidyDiskConsts_1.BYTES_PER_SECTOR) + (track * ExidyDiskConsts_1.SECTORS_PER_TRACK * ExidyDiskConsts_1.BYTES_PER_SECTOR) + offset;
         }
         read(track, sector, offset) {
             return this._data[this.toIndex(track, sector, offset)];
@@ -110,6 +114,7 @@ define("ExidyArrayTape", ["require", "exports"], function (require, exports) {
             return d;
         }
         writeByte(baud, data) {
+            this._data[this._index++] = data;
         }
     }
     exports.default = ArrayTape;
@@ -191,6 +196,7 @@ define("ExidyBrowserKeyboard", ["require", "exports", "ExidyKeyboard"], function
         new KeyConfig('8', 8, 4, 56, ['8']),
         new KeyConfig('9', 8, 3, 57, ['9']),
         new KeyConfig(';', 9, 2, 59, [';']),
+        new KeyConfig(';', 9, 2, 186, [';']),
         new KeyConfig('A', 2, 2, 65, ['a', 'A']),
         new KeyConfig('B', 5, 0, 66, ['b', 'B']),
         new KeyConfig('C', 3, 0, 67, ['c', 'C']),
@@ -367,10 +373,10 @@ define("ExidyCharacters", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"
     }
     exports.default = ExidyCharacters;
 });
-define("ExidyDiskDrive", ["require", "exports", "ExidyDisk"], function (require, exports, ExidyDisk_2) {
+define("ExidyDiskDrive", ["require", "exports", "ExidyDiskConsts"], function (require, exports, ExidyDiskConsts_2) {
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
-    const ACTIVE_FOR_TICKS = 800;
+    const ACTIVE_FOR_TICKS = 400;
     class ExidyDiskDrive {
         constructor(unitNumber) {
             this._activeCount = 0;
@@ -401,7 +407,7 @@ define("ExidyDiskDrive", ["require", "exports", "ExidyDisk"], function (require,
             return this._trackNumber === 0;
         }
         stepForward() {
-            if (this._trackNumber < (ExidyDisk_2.NUMBER_OF_TRACKS - 1)) {
+            if (this._trackNumber < (ExidyDiskConsts_2.NUMBER_OF_TRACKS - 1)) {
                 ++this._trackNumber;
             }
         }
@@ -486,7 +492,7 @@ define("ExidyDiskDrive", ["require", "exports", "ExidyDisk"], function (require,
                 this._activeCount = ACTIVE_FOR_TICKS;
             }
             if (this._disk != null) {
-                if (this._sectorIndex < ExidyDisk_2.BYTES_PER_SECTOR) {
+                if (this._sectorIndex < ExidyDiskConsts_2.BYTES_PER_SECTOR) {
                     let data = this._disk.read(this._trackNumber, this._sectorNumber, this._sectorIndex++);
                     return data & 0xff;
                 }
@@ -497,7 +503,7 @@ define("ExidyDiskDrive", ["require", "exports", "ExidyDisk"], function (require,
             if (this.active()) {
                 this._sectorNumber++;
                 this._sectorIndex = 0;
-                if (this._sectorNumber >= ExidyDisk_2.SECTORS_PER_TRACK) {
+                if (this._sectorNumber >= ExidyDiskConsts_2.SECTORS_PER_TRACK) {
                     this._sectorNumber = 0;
                 }
                 this._newSector = true;
@@ -637,6 +643,10 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryNone", "ExidyMemo
             this._memory.set(data, address);
             this.multplexor.setHandler(address, data.length, this.rom);
         }
+        ejectRom(address, length) {
+            this.multplexor.setHandler(address, length, this.ram);
+            this._memory.fill(255, address, address + length);
+        }
         get memory() {
             return this.multplexor;
         }
@@ -648,6 +658,9 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryNone", "ExidyMemo
         }
         setHandler(address, length, handler) {
             this.multplexor.setHandler(address, length, handler);
+        }
+        getMem(start, length) {
+            return this._memory.subarray(start, start + length);
         }
     }
     exports.default = MemorySystem;
@@ -815,6 +828,9 @@ define("ExidyElementPrinter", ["require", "exports"], function (require, exports
     Object.defineProperty(exports, "__esModule", { value: true });
     class ElementPrinter {
         constructor(element) {
+            this._oddEven = false;
+            this._autoScroll = true;
+            this._plain = '';
             this._encodeHTMLmap = {
                 "&": "&amp;",
                 "'": "&#39;",
@@ -823,9 +839,43 @@ define("ExidyElementPrinter", ["require", "exports"], function (require, exports
                 ">": "&gt;"
             };
             this._element = element;
+            this.clear();
+        }
+        _htmlUnescape(str) {
+            return str
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&amp;/g, '&');
         }
         readByte() {
             return 0x7f;
+        }
+        createHole() {
+            const hole = document.createElement('div');
+            hole.className = 'hole';
+            return hole;
+        }
+        addRow() {
+            const holeRowHole = document.createElement('div');
+            holeRowHole.classList.add('row');
+            this._rowElement = document.createElement('pre');
+            holeRowHole.classList.add(this._oddEven ? 'odd' : 'even');
+            holeRowHole.appendChild(this.createHole());
+            holeRowHole.appendChild(this._rowElement);
+            holeRowHole.appendChild(this.createHole());
+            this._element.appendChild(holeRowHole);
+            this._oddEven = !this._oddEven;
+        }
+        clear() {
+            this._element.innerHTML = '';
+            this._plain = '';
+            for (let i = 0; i < 20; ++i)
+                this.addRow();
+        }
+        setAutoScroll(autoScroll) {
+            this._autoScroll = autoScroll;
         }
         escape(char) {
             let r = this._encodeHTMLmap.char;
@@ -835,10 +885,23 @@ define("ExidyElementPrinter", ["require", "exports"], function (require, exports
             let clock = (data & 0x80) != 0;
             if (!clock) {
                 let char = data & 0x7f;
-                if (char == 0x0a)
+                const c = String.fromCharCode(char);
+                this._plain += c;
+                if (char === 0x0a)
                     return;
-                this._element.innerHTML += this.escape(String.fromCharCode(char));
+                if (char === 0x0d) {
+                    this.addRow();
+                    if (this._autoScroll) {
+                        this._element.scrollTop = this._element.scrollHeight;
+                    }
+                }
+                else {
+                    this._rowElement.innerHTML += this.escape(c);
+                }
             }
+        }
+        getText() {
+            return this._plain;
         }
     }
     exports.default = ElementPrinter;
@@ -912,45 +975,6 @@ define("ExidyIo", ["require", "exports"], function (require, exports) {
         }
     }
     exports.IoSystem = IoSystem;
-});
-define("ExidyScreenPeriodicUpdate", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"], function (require, exports, ExidyMemoryRam_4, ExidyMemory_4) {
-    'use strict';
-    Object.defineProperty(exports, "__esModule", { value: true });
-    class ExidyScreen extends ExidyMemoryRam_4.default {
-        constructor(memory, charsCanvas) {
-            super(memory);
-            this.screenCanvas = document.createElement('canvas');
-            this.screenCanvas.width = 512;
-            this.screenCanvas.height = 240;
-            this.charsCanvas = charsCanvas;
-            this.screenCtx = this.screenCanvas.getContext('2d');
-            setInterval(() => { this.updateAll(); }, 1000);
-        }
-        get canvas() {
-            return this.screenCanvas;
-        }
-        writeByte(address, data) {
-            if (data !== this.readByte(address)) {
-                super.writeByte(address, data);
-            }
-        }
-        updateByte(address, data) {
-            const index = address - ExidyMemory_4.SCREEN_START;
-            const row = index >> 6;
-            const col = index - (row << 6);
-            const char = this.readByte(address);
-            this.screenCtx.drawImage(this.charsCanvas, char << 3, 0, 8, 8, col << 3, row << 3, 8, 8);
-        }
-        charUpdated(updatedChar, updatedRow) {
-        }
-        updateAll() {
-            for (let address = ExidyMemory_4.SCREEN_START; address < ExidyMemory_4.SCREEN_START + ExidyMemory_4.SCREEN_SIZE_BYTES; ++address) {
-                const char = this.readByte(address);
-                this.updateByte(address, char);
-            }
-        }
-    }
-    exports.default = ExidyScreen;
 });
 define("ExidyZ80", ["require", "exports"], function (require, exports) {
     'use strict';
@@ -3253,6 +3277,9 @@ define("ExidyTapeSystem", ["require", "exports", "ExidyTapeUnit", "ExidyTapeUnit
         get units() {
             return this._tapeUnits;
         }
+        getUnit(unit) {
+            return this._tapeUnits[unit];
+        }
     }
     exports.default = TapeSystem;
 });
@@ -3271,6 +3298,7 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
             this.typeSystem = new ExidyTapeSystem_1.default();
             this.centronicsSystem = new ExidyCentronicsSystem_1.default();
             this._keyboard = new ExidyKeyboard_2.default();
+            this._govern = true;
             this.filesystem = filesystem;
             this.memorySystem = new ExidyMemorySystem_1.default();
             this.io = new ExidyIo_1.IoSystem();
@@ -3304,6 +3332,9 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
         get screenCanvas() {
             return this.memorySystem.screenCanvas;
         }
+        ejectRom() {
+            this.memorySystem.ejectRom(0xc000, 0x2000);
+        }
         loadRomFromArray(data) {
             this.memorySystem.loadRom(data, 0xC000);
         }
@@ -3312,6 +3343,11 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
             this.memorySystem.updateCharacters();
             this.memorySystem.updateScreen();
             this.cpu.load(data);
+        }
+        obtainDiskSystem() {
+            return this.ready.then(() => {
+                return this.diskSystem;
+            });
         }
         load(snap) {
             this.ready = this.ready.then(() => {
@@ -3335,6 +3371,11 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
                 });
             });
         }
+        obtainTapeSystem() {
+            return this.ready.then(() => {
+                return this.typeSystem;
+            });
+        }
         loadTape(unit, file) {
             this.ready = this.ready.then(() => {
                 return this.filesystem.read('tapes/' + file).then((data) => {
@@ -3344,6 +3385,13 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
         }
         set centronics(device) {
             this.centronicsSystem.device = device;
+        }
+        set govern(govern) {
+            console.log('govern: ' + govern);
+            this._govern = govern;
+        }
+        getMem(start, length) {
+            return this.memorySystem.getMem(start, length);
         }
         reset() {
             this.cycles = 0;
@@ -3372,23 +3420,36 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
             }, d);
             this.ready.then(() => {
                 setInterval(() => {
-                    t += g * 2000 - c;
-                    c = 0;
-                    if (t > 100000 && d > 0) {
-                        d -= 1;
-                        t = 0;
-                        clearInterval(interval);
-                        interval = setInterval(() => {
-                            c += this.step();
-                        }, d);
+                    if (this._govern) {
+                        t += g * 2000 - c;
+                        c = 0;
+                        if (t > 100000 && d > 0) {
+                            d -= 1;
+                            t = 0;
+                            clearInterval(interval);
+                            interval = setInterval(() => {
+                                c += this.step();
+                            }, d);
+                        }
+                        else if (t < -100000) {
+                            d += 1;
+                            t = 0;
+                            clearInterval(interval);
+                            interval = setInterval(() => {
+                                c += this.step();
+                            }, d);
+                        }
                     }
-                    else if (t < -100000) {
-                        d += 1;
+                    else {
                         t = 0;
-                        clearInterval(interval);
-                        interval = setInterval(() => {
-                            c += this.step();
-                        }, d);
+                        c = 0;
+                        if (d > 0) {
+                            d = 0;
+                            clearInterval(interval);
+                            interval = setInterval(() => {
+                                c += this.step();
+                            }, d);
+                        }
                     }
                 }, g);
             });
@@ -3396,14 +3457,42 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
     }
     exports.default = ExidySorcerer;
 });
-define("main", ["require", "exports", "ExidySorcerer", "ExidyFileBinaryAjax", "ExidyBrowserKeyboard", "ExidyElementPrinter"], function (require, exports, ExidySorcerer_1, ExidyFileBinaryAjax_1, ExidyBrowserKeyboard_1, ExidyElementPrinter_1) {
+define("index", ["require", "exports", "BinaryAjax", "ExidyArrayDisk", "ExidyArrayTape", "ExidyBrowserKeyboard", "ExidyCentronicsSystem", "ExidyCharacters", "ExidyDiskDrive", "ExidyDiskSystem", "ExidyDiskConsts", "ExidyElementPrinter", "ExidyFileBinaryAjax", "ExidyKeyboard", "ExidyMemoryNone", "ExidyMemoryRam", "ExidyMemoryRom", "ExidyMemorySystem", "ExidyScreen", "ExidySorcerer", "ExidyTapeSystem", "ExidyTapeUnitMotorControl", "ExidyTapeUnit"], function (require, exports, BinaryAjax_2, ExidyArrayDisk_2, ExidyArrayTape_2, ExidyBrowserKeyboard_1, ExidyCentronicsSystem_2, ExidyCharacters_2, ExidyDiskDrive_2, ExidyDiskSystem_2, ExidyDiskConsts_3, ExidyElementPrinter_1, ExidyFileBinaryAjax_1, ExidyKeyboard_3, ExidyMemoryNone_2, ExidyMemoryRam_4, ExidyMemoryRom_2, ExidyMemorySystem_2, ExidyScreen_2, ExidySorcerer_1, ExidyTapeSystem_2, ExidyTapeUnitMotorControl_2, ExidyTapeUnit_2) {
+    "use strict";
+    function __export(m) {
+        for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+    }
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.BinaryAjax = BinaryAjax_2.default;
+    exports.ExidyArrayDisk = ExidyArrayDisk_2.default;
+    exports.ExidyArrayTape = ExidyArrayTape_2.default;
+    exports.ExidyBrowserKeyboard = ExidyBrowserKeyboard_1.default;
+    exports.ExidyCentronicsSystem = ExidyCentronicsSystem_2.default;
+    exports.ExidyCharacters = ExidyCharacters_2.default;
+    exports.ExidyDiskDrive = ExidyDiskDrive_2.default;
+    exports.ExidyDiskSystem = ExidyDiskSystem_2.default;
+    __export(ExidyDiskConsts_3);
+    exports.ExidyElementPrinter = ExidyElementPrinter_1.default;
+    exports.ExidyFileBinaryAjax = ExidyFileBinaryAjax_1.default;
+    exports.ExidyKeyboard = ExidyKeyboard_3.default;
+    exports.ExidyMemoryNone = ExidyMemoryNone_2.default;
+    exports.ExidyMemoryRam = ExidyMemoryRam_4.default;
+    exports.ExidyMemoryRom = ExidyMemoryRom_2.default;
+    exports.ExidyMemorySystem = ExidyMemorySystem_2.default;
+    exports.ExidyScreen = ExidyScreen_2.default;
+    exports.ExidySorcerer = ExidySorcerer_1.default;
+    exports.ExidyTapeSystem = ExidyTapeSystem_2.default;
+    exports.ExidyTapeUnitMotorControl = ExidyTapeUnitMotorControl_2.default;
+    exports.ExidyTapeUnit = ExidyTapeUnit_2.default;
+});
+define("main", ["require", "exports", "ExidySorcerer", "ExidyFileBinaryAjax", "ExidyBrowserKeyboard", "ExidyElementPrinter"], function (require, exports, ExidySorcerer_2, ExidyFileBinaryAjax_2, ExidyBrowserKeyboard_2, ExidyElementPrinter_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const screenContainer = document.getElementById('exidy-screen-container');
     const printerPaper = document.getElementById('exidyPaper');
-    const exidyFile = new ExidyFileBinaryAjax_1.default();
-    const exidySorcerer = new ExidySorcerer_1.default(exidyFile);
-    const keyboard = new ExidyBrowserKeyboard_1.default(exidySorcerer.keyboard);
+    const exidyFile = new ExidyFileBinaryAjax_2.default();
+    const exidySorcerer = new ExidySorcerer_2.default(exidyFile);
+    const keyboard = new ExidyBrowserKeyboard_2.default(exidySorcerer.keyboard);
     screenContainer.appendChild(exidySorcerer.screenCanvas);
     screenContainer.addEventListener('keydown', (key) => {
         keyboard.browserKeyDown(key.keyCode);
@@ -3415,6 +3504,6 @@ define("main", ["require", "exports", "ExidySorcerer", "ExidyFileBinaryAjax", "E
         key.stopPropagation();
         key.preventDefault();
     });
-    const printer = new ExidyElementPrinter_1.default(printerPaper);
+    const printer = new ExidyElementPrinter_2.default(printerPaper);
     exidySorcerer.run();
 });

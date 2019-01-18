@@ -1,16 +1,14 @@
 {
 	"compilerOptions": {
 		"moduleResolution": "node",
-		"module": "es6",
+		"module": "amd",
 		"sourceMap": true,
-		"target": "es6",
+		"target": "es2015",
 		"watch": true,
 		"listFiles": true,
 		"removeComments": true,
 		"baseUrl": ".",
-		"paths": {
-			"Z80" : ["node_modules/z80/src/Z80"]
-		}
+    "outFile": "./build.js"
 	},
 	"include": [
 		"src/**/*.ts"

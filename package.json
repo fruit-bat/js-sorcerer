@@ -2,12 +2,14 @@
   "name": "js-sorcerer",
   "version": "0.0.1",
   "description": "An Exidy Sorcerer emulator written in JavaScript",
-  "main": "docs/index.js",
+  "main": "dist/index.js",
   "directories": {
     "test": "tests"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "serve": "gulp serve",
+    "build": "gulp build"
   },
   "repository": {
     "type": "git",
