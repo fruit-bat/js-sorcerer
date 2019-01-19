@@ -2,169 +2,112 @@
 
 import Keyboard from './ExidyKeyboard';
 
-class KeyConfig {
-    private _key: string;
-    private _row: number;
-    private _col: number;
-    private _keyCode: number;
-    private _keys: Array<string>;
+const KEYCODE_TO_KEYID = {
+    8: 'BACK SPACE', // Backspace
+    9: 'Tab', // Tab
+    13: 'ENTER', // Enter
+    16: 'SHIFT', // Shift
+    17: 'CTRL', // Control
+    27: 'ESC', // Escape
+    32: 'SPACE', //
+    36: 'Unknown3', // Home
+    37: 'NUM_4', // left
+    38: 'NUM_8', // up
+    39: 'NUM_6', // right
+    40: 'NUM_2', // down
+    46: 'Delete', // Delete
+    48: '0', // 0
+    49: '1', // 1
+    50: '2', // 2
+    51: '3', // 3
+    52: '4', // 4
+    53: '5', // 5
+    54: '6', // 6
+    55: '7', // 7
+    56: '8', // 8
+    57: '9', // 9
+    59: ';', // ;
+    65: 'A', // a, A
+    66: 'B', // b, B
+    67: 'C', // c, C
+    68: 'D', // d, D
+    69: 'E', // e, E
+    70: 'F', // f, F
+    71: 'G', // g, G
+    72: 'H', // h, H
+    73: 'I', // i, I
+    74: 'J', // j, J
+    75: 'K', // k, K
+    76: 'L', // l, L
+    77: 'M', // m, M
+    78: 'N', // n, N
+    79: 'O', // o, O
+    80: 'P', // p, P
+    81: 'Q', // q, Q
+    82: 'R', // r, R
+    83: 'S', // s, S
+    84: 'T', // t, T
+    85: 'U', // u, U
+    86: 'V', // v, V
+    87: 'W', // w, W
+    88: 'X', // x, X
+    89: 'Y', // y, Y
+    90: 'Z', // z, Z
+    96: 'NUM_0', // 0
+    97: 'NUM_1', // 1
+    98: 'NUM_2', // 2
+    99: 'NUM_3', // 3
+    100: 'NUM_4', // 4
+    101: 'NUM_5', // 5
+    102: 'NUM_6', // 6
+    103: 'NUM_7', // 7
+    104: 'NUM_8', // 8
+    105: 'NUM_9', // 9
+    106: 'NUM_*', // *
+    107: 'NUM_+', // +
+    109: 'NUM_-', // -
+    110: 'NUM_.', // .
+    111: 'NUM_/', // /
+    112: 'Graphics', // F1
+    115: 'Unknown1', // F4
+    116: 'Unknown2', // F5
+    117: 'Clear', // F6
+    119: 'Repeat', // F8
+    163: '^', // ^
+    173: '-', // -
+    186: ';', // ;
+    187: '^', // =
+    188: ',', // ,
+    189: '-', // -
+    190: '.', // .
+    191: '/', // /
+    192: '@', // '
+    219: '[', // ]
+    220: 'Backslash', // backslash
+    221: ']', // ]
+    222: ':' // #
+};
 
-    public constructor(
-        key: string,
-        row: number,
-        col: number,
-        keyCode: number,
-        keys: Array<string>) {
+export default class BrowserKeyboard {
 
-        this._key = key;
-        this._row = row;
-        this._col = col;
-        this._keyCode = keyCode;
-        this._keys = keys;
-    }
-
-    public get row() {
-        return this._row;
-    }
-
-    public get col() {
-        return this._col;
-    }
-
-    public get keyCode() {
-        return this._keyCode;
-    }
-
-    public get keys() {
-        return this._keys;
-    }
-}
-
-const KEY_CONFIG: Array<KeyConfig> = [
-
-// TODO 0,3 shift lock
-// TODO 11,2,"DOWN"
-// TODO 15,3,"Numpad ="
-
-    // row, col, keyCode, keys
-    new KeyConfig('BACK SPACE', 11, 0, 8, ['Backspace'] ),
-    new KeyConfig('Tab', 1, 3, 9, ['Tab'] ),
-    new KeyConfig('ENTER', 11, 1, 13, ['Enter']),
-    new KeyConfig('SHIFT', 0, 4, 16, ['Shift'] ),
-    new KeyConfig('CTRL', 0, 2, 17, ['Control'] ),
-    new KeyConfig('ESC', 0, 0, 27, ['Escape'] ),
-    new KeyConfig('SPACE', 1, 2, 32, [' '] ),
-    new KeyConfig('Unknown', 1, 4, 36, ['Home'] ),
-    new KeyConfig('Delete', 15, 0, 46, ['Delete'] ),
-
-    new KeyConfig('0', 9, 4, 48, ['0']),
-    new KeyConfig('1', 2, 4, 49, ['1']),
-    new KeyConfig('2', 3, 4, 50, ['2']),
-    new KeyConfig('3', 4, 4, 51, ['3']),
-    new KeyConfig('4', 4, 3, 52, ['4']),
-    new KeyConfig('5', 5, 4, 53, ['5']),
-    new KeyConfig('6', 6, 4, 54, ['6']),
-    new KeyConfig('7', 7, 4, 55, ['7']),
-    new KeyConfig('8', 8, 4, 56, ['8']),
-    new KeyConfig('9', 8, 3, 57, ['9']),
-    new KeyConfig(';', 9, 2, 59, [';']),
-    new KeyConfig(';', 9, 2, 186, [';']),
-
-    new KeyConfig('A', 2, 2, 65, ['a', 'A']),
-    new KeyConfig('B', 5, 0, 66, ['b', 'B']),
-    new KeyConfig('C', 3, 0, 67, ['c', 'C']),
-    new KeyConfig('D', 3, 1, 68, ['d', 'D']),
-    new KeyConfig('E', 4, 2, 69, ['e', 'E']),
-    new KeyConfig('F', 4, 0, 70, ['f', 'F']),
-    new KeyConfig('G', 5, 2, 71, ['g', 'G']),
-    new KeyConfig('H', 6, 2, 72, ['h', 'H']),
-    new KeyConfig('I', 7, 1, 73, ['i', 'I']),
-    new KeyConfig('J', 7, 2, 74, ['j', 'J']),
-    new KeyConfig('K', 7, 0, 75, ['k', 'K']),
-    new KeyConfig('L', 8, 1, 76, ['l', 'L']),
-    new KeyConfig('M', 6, 0, 77, ['m', 'M']),
-    new KeyConfig('N', 6, 1, 78, ['n', 'N']),
-    new KeyConfig('O', 8, 2, 79, ['o', 'O']),
-    new KeyConfig('P', 9, 3, 80, ['p', 'P']),
-    new KeyConfig('Q', 2, 3, 81, ['q', 'Q']),
-    new KeyConfig('R', 4, 1, 82, ['r', 'R']),
-    new KeyConfig('S', 3, 2, 83, ['s', 'S']),
-    new KeyConfig('T', 5, 3, 84, ['t', 'T']),
-    new KeyConfig('U', 7, 3, 85, ['u', 'U']),
-    new KeyConfig('V', 5, 1, 86, ['v', 'V']),
-    new KeyConfig('W', 3, 3, 87, ['w', 'W']),
-    new KeyConfig('X', 2, 0, 88, ['x', 'X'] ),
-    new KeyConfig('Y', 6, 3, 89, ['y', 'Y'] ),
-    new KeyConfig('Z', 2, 1, 90, ['z', 'Z'] ),
-
-    new KeyConfig('Grapxhics', 0, 1, 112, ['F1'] ),
-    new KeyConfig('Clear', 1, 0, 117, ['F6'] ),
-    new KeyConfig('Repeat', 1, 1, 119, ['F8'] ),
-    new KeyConfig('^', 11, 3, 163, ['^'] ), // ^~
-    new KeyConfig('-', 11, 4, 173, ['-'] ),
-    new KeyConfig('-', 11, 4, 189, ['-'] ),
-    new KeyConfig(',', 8, 0, 188, [','] ),
-    new KeyConfig('.', 9, 1, 190, ['.'] ),
-    new KeyConfig('/', 9, 0, 191, ['/'] ),
-
-    new KeyConfig('[', 10, 3, 219, [']'] ),
-    new KeyConfig('[', 10, 2, 221, [']'] ),
-    new KeyConfig('Backslash', 10, 0, 220, ['\\'] ),
-    new KeyConfig('@', 10, 1, 192, ['@'] ), // LF/`
-    new KeyConfig('\'', 10, 4, 222, ['\''] ), // :*
-
-    // Numpad (Currently with num-lock on!?);
-    new KeyConfig('NUM_0', 13, 0, 96, ['0']),
-    new KeyConfig('NUM_1', 13, 1, 97, ['1']),
-    new KeyConfig('NUM_2', 14, 1, 98, ['2']),
-    new KeyConfig('NUM_3', 15, 4, 99, ['3']),
-    new KeyConfig('NUM_4', 13, 2, 100, ['4']),
-    new KeyConfig('NUM_5', 14, 2, 101, ['5']),
-    new KeyConfig('NUM_6', 14, 3, 102, ['6']),
-    new KeyConfig('NUM_7', 13, 4, 103, ['7']),
-    new KeyConfig('NUM_8', 13, 3, 104, ['8']),
-    new KeyConfig('NUM_9', 14, 4, 105, ['9']),
-    new KeyConfig('NUM_*', 12, 1, 106, ['*']),
-    new KeyConfig('NUM_+', 12, 0, 107, ['+']),
-    new KeyConfig('NUM_-', 12, 3, 109, ['-']),
-    new KeyConfig('NUM_/', 12, 2, 111, ['/']),
-    new KeyConfig('NUM_.', 14, 0, 110, ['.']),
-
-    new KeyConfig('Unknown', 15, 1, 115, ['F4']),
-    new KeyConfig('Unknown', 15, 2, 116, ['F5'])
-];
-
-export default class BrowserKeyboard extends Keyboard {
-
-    private _keyCodeToConfig;
     private _keyboard: Keyboard;
 
     public constructor(keyboard: Keyboard) {
-        super();
-
         this._keyboard = keyboard;
-
-        this._keyCodeToConfig = KEY_CONFIG.reduce(
-            (m, keyConfig) => {
-                m[keyConfig.keyCode] = keyConfig;
-                return m;
-            },
-            {}
-        );
     }
 
     public browserKeyUp(key: number): void {
-        const mapping = this._keyCodeToConfig[key];
-        if (mapping) {
-            this._keyboard.release(mapping.row, mapping.col);
+        const keyId = KEYCODE_TO_KEYID[key];
+        if (keyId) {
+            this._keyboard.releaseKey(keyId);
         }
     }
 
     public browserKeyDown(key: number): void {
-        const mapping = this._keyCodeToConfig[key];
-        console.log(key + ' ' + JSON.stringify(mapping));
-        if (mapping) {
-            this._keyboard.press(mapping.row, mapping.col);
+        const keyId = KEYCODE_TO_KEYID[key];
+        console.log(key + ' ' + JSON.stringify(keyId));
+        if (keyId) {
+            this._keyboard.pressKey(keyId);
         }
     }
 }

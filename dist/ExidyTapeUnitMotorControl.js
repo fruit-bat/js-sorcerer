@@ -8,11 +8,9 @@ export default class TapeUnitMotorControl {
     writeByte(data) {
         let motorOn = (this._motorMask & data) !== 0;
         if (motorOn && !this._motorOn) {
-            console.log('Tape motor on');
             this._baud = (data & 0x40) === 0 ? 300 : 1200;
         }
         else if (!motorOn && this._motorOn) {
-            console.log('Tape motor off');
         }
         this._motorOn = motorOn;
     }

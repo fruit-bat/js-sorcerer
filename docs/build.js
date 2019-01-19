@@ -127,14 +127,121 @@ define("ExidyOutput", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
 });
-define("ExidyKeyboard", ["require", "exports"], function (require, exports) {
+define("ExidyKey", ["require", "exports"], function (require, exports) {
+    'use strict';
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class ExidyKey {
+        constructor(id, row, col) {
+            this._id = id;
+            this._row = row;
+            this._col = col;
+        }
+        get id() {
+            return this._id;
+        }
+        get row() {
+            return this._row;
+        }
+        get col() {
+            return this._col;
+        }
+    }
+    exports.default = ExidyKey;
+});
+define("ExidyKeyboard", ["require", "exports", "ExidyKey"], function (require, exports, ExidyKey_1) {
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class Keyboard {
         constructor() {
             this.activeScanLine = 0;
             this.line = new Array(16);
+            this.listener = null;
             this.line.fill(0xff);
+            const keyArray = [
+                new ExidyKey_1.default('BACK SPACE', 11, 0),
+                new ExidyKey_1.default('Tab', 1, 3),
+                new ExidyKey_1.default('ENTER', 11, 1),
+                new ExidyKey_1.default('SHIFT', 0, 4),
+                new ExidyKey_1.default('CTRL', 0, 2),
+                new ExidyKey_1.default('SHIFT LOCK', 0, 3),
+                new ExidyKey_1.default('ESC', 0, 0),
+                new ExidyKey_1.default('SPACE', 1, 2),
+                new ExidyKey_1.default('unknown3', 1, 4),
+                new ExidyKey_1.default('Delete', 15, 0),
+                new ExidyKey_1.default('0', 9, 4),
+                new ExidyKey_1.default('1', 2, 4),
+                new ExidyKey_1.default('2', 3, 4),
+                new ExidyKey_1.default('3', 4, 4),
+                new ExidyKey_1.default('4', 4, 3),
+                new ExidyKey_1.default('5', 5, 4),
+                new ExidyKey_1.default('6', 6, 4),
+                new ExidyKey_1.default('7', 7, 4),
+                new ExidyKey_1.default('8', 8, 4),
+                new ExidyKey_1.default('9', 8, 3),
+                new ExidyKey_1.default(';', 9, 2),
+                new ExidyKey_1.default('A', 2, 2),
+                new ExidyKey_1.default('B', 5, 0),
+                new ExidyKey_1.default('C', 3, 0),
+                new ExidyKey_1.default('D', 3, 1),
+                new ExidyKey_1.default('E', 4, 2),
+                new ExidyKey_1.default('F', 4, 0),
+                new ExidyKey_1.default('G', 5, 2),
+                new ExidyKey_1.default('H', 6, 2),
+                new ExidyKey_1.default('I', 7, 1),
+                new ExidyKey_1.default('J', 7, 2),
+                new ExidyKey_1.default('K', 7, 0),
+                new ExidyKey_1.default('L', 8, 1),
+                new ExidyKey_1.default('M', 6, 0),
+                new ExidyKey_1.default('N', 6, 1),
+                new ExidyKey_1.default('O', 8, 2),
+                new ExidyKey_1.default('P', 9, 3),
+                new ExidyKey_1.default('Q', 2, 3),
+                new ExidyKey_1.default('R', 4, 1),
+                new ExidyKey_1.default('S', 3, 2),
+                new ExidyKey_1.default('T', 5, 3),
+                new ExidyKey_1.default('U', 7, 3),
+                new ExidyKey_1.default('V', 5, 1),
+                new ExidyKey_1.default('W', 3, 3),
+                new ExidyKey_1.default('X', 2, 0),
+                new ExidyKey_1.default('Y', 6, 3),
+                new ExidyKey_1.default('Z', 2, 1),
+                new ExidyKey_1.default('Graphics', 0, 1),
+                new ExidyKey_1.default('Clear', 1, 0),
+                new ExidyKey_1.default('Repeat', 1, 1),
+                new ExidyKey_1.default('^', 11, 3),
+                new ExidyKey_1.default('-', 11, 4),
+                new ExidyKey_1.default(',', 8, 0),
+                new ExidyKey_1.default('.', 9, 1),
+                new ExidyKey_1.default('/', 9, 0),
+                new ExidyKey_1.default('[', 10, 3),
+                new ExidyKey_1.default(']', 10, 2),
+                new ExidyKey_1.default('Backslash', 10, 0),
+                new ExidyKey_1.default('@', 10, 1),
+                new ExidyKey_1.default(':', 10, 4),
+                new ExidyKey_1.default('NUM_0', 13, 0),
+                new ExidyKey_1.default('NUM_1', 13, 1),
+                new ExidyKey_1.default('NUM_2', 14, 1),
+                new ExidyKey_1.default('NUM_3', 15, 4),
+                new ExidyKey_1.default('NUM_4', 13, 2),
+                new ExidyKey_1.default('NUM_5', 14, 2),
+                new ExidyKey_1.default('NUM_6', 14, 3),
+                new ExidyKey_1.default('NUM_7', 13, 4),
+                new ExidyKey_1.default('NUM_8', 13, 3),
+                new ExidyKey_1.default('NUM_9', 14, 4),
+                new ExidyKey_1.default('NUM_*', 12, 1),
+                new ExidyKey_1.default('NUM_+', 12, 0),
+                new ExidyKey_1.default('NUM_-', 12, 3),
+                new ExidyKey_1.default('NUM_/', 12, 2),
+                new ExidyKey_1.default('NUM_.', 14, 0),
+                new ExidyKey_1.default('Unknown1', 15, 1),
+                new ExidyKey_1.default('Unknown2', 15, 2),
+                new ExidyKey_1.default('LINE FEED', 11, 2),
+                new ExidyKey_1.default('NUM_=', 15, 3)
+            ];
+            this._keymap = keyArray.reduce((m, k) => {
+                m[k.id] = k;
+                return m;
+            }, new Map());
         }
         readByte(address) {
             return this.line[this.activeScanLine];
@@ -148,133 +255,132 @@ define("ExidyKeyboard", ["require", "exports"], function (require, exports) {
         press(row, key) {
             this.line[row] &= ~(1 << key);
         }
+        isPressed(row, key) {
+            return ((~(this.line[row])) & (1 << key)) !== 0x00;
+        }
+        pressKey(keyId) {
+            const key = this._keymap[keyId];
+            if (!this.isPressed(key.row, key.col)) {
+                console.log('pressing ' + key.row + ' ' + key.col);
+                this.press(key.row, key.col);
+                if (this.listener)
+                    this.listener(key.id, true);
+            }
+        }
+        releaseKey(keyId) {
+            const key = this._keymap[keyId];
+            if (this.isPressed(key.row, key.col)) {
+                this.release(key.row, key.col);
+                if (this.listener)
+                    this.listener(key.id, false);
+            }
+        }
     }
     exports.default = Keyboard;
 });
-define("ExidyBrowserKeyboard", ["require", "exports", "ExidyKeyboard"], function (require, exports, ExidyKeyboard_1) {
+define("ExidyBrowserKeyboard", ["require", "exports"], function (require, exports) {
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
-    class KeyConfig {
-        constructor(key, row, col, keyCode, keys) {
-            this._key = key;
-            this._row = row;
-            this._col = col;
-            this._keyCode = keyCode;
-            this._keys = keys;
-        }
-        get row() {
-            return this._row;
-        }
-        get col() {
-            return this._col;
-        }
-        get keyCode() {
-            return this._keyCode;
-        }
-        get keys() {
-            return this._keys;
-        }
-    }
-    const KEY_CONFIG = [
-        new KeyConfig('BACK SPACE', 11, 0, 8, ['Backspace']),
-        new KeyConfig('Tab', 1, 3, 9, ['Tab']),
-        new KeyConfig('ENTER', 11, 1, 13, ['Enter']),
-        new KeyConfig('SHIFT', 0, 4, 16, ['Shift']),
-        new KeyConfig('CTRL', 0, 2, 17, ['Control']),
-        new KeyConfig('ESC', 0, 0, 27, ['Escape']),
-        new KeyConfig('SPACE', 1, 2, 32, [' ']),
-        new KeyConfig('Unknown', 1, 4, 36, ['Home']),
-        new KeyConfig('Delete', 15, 0, 46, ['Delete']),
-        new KeyConfig('0', 9, 4, 48, ['0']),
-        new KeyConfig('1', 2, 4, 49, ['1']),
-        new KeyConfig('2', 3, 4, 50, ['2']),
-        new KeyConfig('3', 4, 4, 51, ['3']),
-        new KeyConfig('4', 4, 3, 52, ['4']),
-        new KeyConfig('5', 5, 4, 53, ['5']),
-        new KeyConfig('6', 6, 4, 54, ['6']),
-        new KeyConfig('7', 7, 4, 55, ['7']),
-        new KeyConfig('8', 8, 4, 56, ['8']),
-        new KeyConfig('9', 8, 3, 57, ['9']),
-        new KeyConfig(';', 9, 2, 59, [';']),
-        new KeyConfig(';', 9, 2, 186, [';']),
-        new KeyConfig('A', 2, 2, 65, ['a', 'A']),
-        new KeyConfig('B', 5, 0, 66, ['b', 'B']),
-        new KeyConfig('C', 3, 0, 67, ['c', 'C']),
-        new KeyConfig('D', 3, 1, 68, ['d', 'D']),
-        new KeyConfig('E', 4, 2, 69, ['e', 'E']),
-        new KeyConfig('F', 4, 0, 70, ['f', 'F']),
-        new KeyConfig('G', 5, 2, 71, ['g', 'G']),
-        new KeyConfig('H', 6, 2, 72, ['h', 'H']),
-        new KeyConfig('I', 7, 1, 73, ['i', 'I']),
-        new KeyConfig('J', 7, 2, 74, ['j', 'J']),
-        new KeyConfig('K', 7, 0, 75, ['k', 'K']),
-        new KeyConfig('L', 8, 1, 76, ['l', 'L']),
-        new KeyConfig('M', 6, 0, 77, ['m', 'M']),
-        new KeyConfig('N', 6, 1, 78, ['n', 'N']),
-        new KeyConfig('O', 8, 2, 79, ['o', 'O']),
-        new KeyConfig('P', 9, 3, 80, ['p', 'P']),
-        new KeyConfig('Q', 2, 3, 81, ['q', 'Q']),
-        new KeyConfig('R', 4, 1, 82, ['r', 'R']),
-        new KeyConfig('S', 3, 2, 83, ['s', 'S']),
-        new KeyConfig('T', 5, 3, 84, ['t', 'T']),
-        new KeyConfig('U', 7, 3, 85, ['u', 'U']),
-        new KeyConfig('V', 5, 1, 86, ['v', 'V']),
-        new KeyConfig('W', 3, 3, 87, ['w', 'W']),
-        new KeyConfig('X', 2, 0, 88, ['x', 'X']),
-        new KeyConfig('Y', 6, 3, 89, ['y', 'Y']),
-        new KeyConfig('Z', 2, 1, 90, ['z', 'Z']),
-        new KeyConfig('Grapxhics', 0, 1, 112, ['F1']),
-        new KeyConfig('Clear', 1, 0, 117, ['F6']),
-        new KeyConfig('Repeat', 1, 1, 119, ['F8']),
-        new KeyConfig('^', 11, 3, 163, ['^']),
-        new KeyConfig('-', 11, 4, 173, ['-']),
-        new KeyConfig('-', 11, 4, 189, ['-']),
-        new KeyConfig(',', 8, 0, 188, [',']),
-        new KeyConfig('.', 9, 1, 190, ['.']),
-        new KeyConfig('/', 9, 0, 191, ['/']),
-        new KeyConfig('[', 10, 3, 219, [']']),
-        new KeyConfig('[', 10, 2, 221, [']']),
-        new KeyConfig('Backslash', 10, 0, 220, ['\\']),
-        new KeyConfig('@', 10, 1, 192, ['@']),
-        new KeyConfig('\'', 10, 4, 222, ['\'']),
-        new KeyConfig('NUM_0', 13, 0, 96, ['0']),
-        new KeyConfig('NUM_1', 13, 1, 97, ['1']),
-        new KeyConfig('NUM_2', 14, 1, 98, ['2']),
-        new KeyConfig('NUM_3', 15, 4, 99, ['3']),
-        new KeyConfig('NUM_4', 13, 2, 100, ['4']),
-        new KeyConfig('NUM_5', 14, 2, 101, ['5']),
-        new KeyConfig('NUM_6', 14, 3, 102, ['6']),
-        new KeyConfig('NUM_7', 13, 4, 103, ['7']),
-        new KeyConfig('NUM_8', 13, 3, 104, ['8']),
-        new KeyConfig('NUM_9', 14, 4, 105, ['9']),
-        new KeyConfig('NUM_*', 12, 1, 106, ['*']),
-        new KeyConfig('NUM_+', 12, 0, 107, ['+']),
-        new KeyConfig('NUM_-', 12, 3, 109, ['-']),
-        new KeyConfig('NUM_/', 12, 2, 111, ['/']),
-        new KeyConfig('NUM_.', 14, 0, 110, ['.']),
-        new KeyConfig('Unknown', 15, 1, 115, ['F4']),
-        new KeyConfig('Unknown', 15, 2, 116, ['F5'])
-    ];
-    class BrowserKeyboard extends ExidyKeyboard_1.default {
+    const KEYCODE_TO_KEYID = {
+        8: 'BACK SPACE',
+        9: 'Tab',
+        13: 'ENTER',
+        16: 'SHIFT',
+        17: 'CTRL',
+        27: 'ESC',
+        32: 'SPACE',
+        36: 'Unknown3',
+        37: 'NUM_4',
+        38: 'NUM_8',
+        39: 'NUM_6',
+        40: 'NUM_2',
+        46: 'Delete',
+        48: '0',
+        49: '1',
+        50: '2',
+        51: '3',
+        52: '4',
+        53: '5',
+        54: '6',
+        55: '7',
+        56: '8',
+        57: '9',
+        59: ';',
+        65: 'A',
+        66: 'B',
+        67: 'C',
+        68: 'D',
+        69: 'E',
+        70: 'F',
+        71: 'G',
+        72: 'H',
+        73: 'I',
+        74: 'J',
+        75: 'K',
+        76: 'L',
+        77: 'M',
+        78: 'N',
+        79: 'O',
+        80: 'P',
+        81: 'Q',
+        82: 'R',
+        83: 'S',
+        84: 'T',
+        85: 'U',
+        86: 'V',
+        87: 'W',
+        88: 'X',
+        89: 'Y',
+        90: 'Z',
+        96: 'NUM_0',
+        97: 'NUM_1',
+        98: 'NUM_2',
+        99: 'NUM_3',
+        100: 'NUM_4',
+        101: 'NUM_5',
+        102: 'NUM_6',
+        103: 'NUM_7',
+        104: 'NUM_8',
+        105: 'NUM_9',
+        106: 'NUM_*',
+        107: 'NUM_+',
+        109: 'NUM_-',
+        110: 'NUM_.',
+        111: 'NUM_/',
+        112: 'Graphics',
+        115: 'Unknown1',
+        116: 'Unknown2',
+        117: 'Clear',
+        119: 'Repeat',
+        163: '^',
+        173: '-',
+        186: ';',
+        187: '^',
+        188: ',',
+        189: '-',
+        190: '.',
+        191: '/',
+        192: '@',
+        219: '[',
+        220: 'Backslash',
+        221: ']',
+        222: ':'
+    };
+    class BrowserKeyboard {
         constructor(keyboard) {
-            super();
             this._keyboard = keyboard;
-            this._keyCodeToConfig = KEY_CONFIG.reduce((m, keyConfig) => {
-                m[keyConfig.keyCode] = keyConfig;
-                return m;
-            }, {});
         }
         browserKeyUp(key) {
-            const mapping = this._keyCodeToConfig[key];
-            if (mapping) {
-                this._keyboard.release(mapping.row, mapping.col);
+            const keyId = KEYCODE_TO_KEYID[key];
+            if (keyId) {
+                this._keyboard.releaseKey(keyId);
             }
         }
         browserKeyDown(key) {
-            const mapping = this._keyCodeToConfig[key];
-            console.log(key + ' ' + JSON.stringify(mapping));
-            if (mapping) {
-                this._keyboard.press(mapping.row, mapping.col);
+            const keyId = KEYCODE_TO_KEYID[key];
+            console.log(key + ' ' + JSON.stringify(keyId));
+            if (keyId) {
+                this._keyboard.pressKey(keyId);
             }
         }
     }
@@ -3166,11 +3272,9 @@ define("ExidyTapeUnitMotorControl", ["require", "exports"], function (require, e
         writeByte(data) {
             let motorOn = (this._motorMask & data) !== 0;
             if (motorOn && !this._motorOn) {
-                console.log('Tape motor on');
                 this._baud = (data & 0x40) === 0 ? 300 : 1200;
             }
             else if (!motorOn && this._motorOn) {
-                console.log('Tape motor off');
             }
             this._motorOn = motorOn;
         }
@@ -3291,7 +3395,7 @@ define("ExidyTapeSystem", ["require", "exports", "ExidyTapeUnit", "ExidyTapeUnit
     }
     exports.default = TapeSystem;
 });
-define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMemorySystem", "ExidyIo", "ExidyKeyboard", "ExidyArrayDisk", "ExidyDiskSystem", "ExidyTapeSystem", "ExidyArrayTape", "ExidyCentronicsSystem"], function (require, exports, ExidyZ80_1, DropZone_1, ExidyMemorySystem_1, ExidyIo_1, ExidyKeyboard_2, ExidyArrayDisk_1, ExidyDiskSystem_1, ExidyTapeSystem_1, ExidyArrayTape_1, ExidyCentronicsSystem_1) {
+define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMemorySystem", "ExidyIo", "ExidyKeyboard", "ExidyArrayDisk", "ExidyDiskSystem", "ExidyTapeSystem", "ExidyArrayTape", "ExidyCentronicsSystem"], function (require, exports, ExidyZ80_1, DropZone_1, ExidyMemorySystem_1, ExidyIo_1, ExidyKeyboard_1, ExidyArrayDisk_1, ExidyDiskSystem_1, ExidyTapeSystem_1, ExidyArrayTape_1, ExidyCentronicsSystem_1) {
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     const defaultRoms = [
@@ -3305,7 +3409,7 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
         constructor(filesystem) {
             this.typeSystem = new ExidyTapeSystem_1.default();
             this.centronicsSystem = new ExidyCentronicsSystem_1.default();
-            this._keyboard = new ExidyKeyboard_2.default();
+            this._keyboard = new ExidyKeyboard_1.default();
             this._govern = true;
             this.filesystem = filesystem;
             this.memorySystem = new ExidyMemorySystem_1.default();
@@ -3465,7 +3569,7 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
     }
     exports.default = ExidySorcerer;
 });
-define("index", ["require", "exports", "BinaryAjax", "ExidyArrayDisk", "ExidyArrayTape", "ExidyBrowserKeyboard", "ExidyCentronicsSystem", "ExidyCharacters", "ExidyDiskDrive", "ExidyDiskSystem", "ExidyDiskConsts", "ExidyElementPrinter", "ExidyFileBinaryAjax", "ExidyKeyboard", "ExidyMemoryNone", "ExidyMemoryRam", "ExidyMemoryRom", "ExidyMemorySystem", "ExidyScreen", "ExidySorcerer", "ExidyTapeSystem", "ExidyTapeUnitMotorControl", "ExidyTapeUnit"], function (require, exports, BinaryAjax_2, ExidyArrayDisk_2, ExidyArrayTape_2, ExidyBrowserKeyboard_1, ExidyCentronicsSystem_2, ExidyCharacters_2, ExidyDiskDrive_2, ExidyDiskSystem_2, ExidyDiskConsts_3, ExidyElementPrinter_1, ExidyFileBinaryAjax_1, ExidyKeyboard_3, ExidyMemoryNone_2, ExidyMemoryRam_4, ExidyMemoryRom_2, ExidyMemorySystem_2, ExidyScreen_2, ExidySorcerer_1, ExidyTapeSystem_2, ExidyTapeUnitMotorControl_2, ExidyTapeUnit_2) {
+define("index", ["require", "exports", "BinaryAjax", "ExidyArrayDisk", "ExidyArrayTape", "ExidyBrowserKeyboard", "ExidyCentronicsSystem", "ExidyCharacters", "ExidyDiskDrive", "ExidyDiskSystem", "ExidyDiskConsts", "ExidyElementPrinter", "ExidyFileBinaryAjax", "ExidyKeyboard", "ExidyMemoryNone", "ExidyMemoryRam", "ExidyMemoryRom", "ExidyMemorySystem", "ExidyScreen", "ExidySorcerer", "ExidyTapeSystem", "ExidyTapeUnitMotorControl", "ExidyTapeUnit"], function (require, exports, BinaryAjax_2, ExidyArrayDisk_2, ExidyArrayTape_2, ExidyBrowserKeyboard_1, ExidyCentronicsSystem_2, ExidyCharacters_2, ExidyDiskDrive_2, ExidyDiskSystem_2, ExidyDiskConsts_3, ExidyElementPrinter_1, ExidyFileBinaryAjax_1, ExidyKeyboard_2, ExidyMemoryNone_2, ExidyMemoryRam_4, ExidyMemoryRom_2, ExidyMemorySystem_2, ExidyScreen_2, ExidySorcerer_1, ExidyTapeSystem_2, ExidyTapeUnitMotorControl_2, ExidyTapeUnit_2) {
     "use strict";
     function __export(m) {
         for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
@@ -3482,7 +3586,7 @@ define("index", ["require", "exports", "BinaryAjax", "ExidyArrayDisk", "ExidyArr
     __export(ExidyDiskConsts_3);
     exports.ExidyElementPrinter = ExidyElementPrinter_1.default;
     exports.ExidyFileBinaryAjax = ExidyFileBinaryAjax_1.default;
-    exports.ExidyKeyboard = ExidyKeyboard_3.default;
+    exports.ExidyKeyboard = ExidyKeyboard_2.default;
     exports.ExidyMemoryNone = ExidyMemoryNone_2.default;
     exports.ExidyMemoryRam = ExidyMemoryRam_4.default;
     exports.ExidyMemoryRom = ExidyMemoryRom_2.default;
