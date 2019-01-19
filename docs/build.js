@@ -602,17 +602,25 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryNone", "ExidyMemo
     Object.defineProperty(exports, "__esModule", { value: true });
     class Multiplexor {
         constructor() {
-            this.handlers = new Array(ExidyMemory_3.MEMORY_SIZE_IN_BYTES);
+            this._ignoreBits = 7;
+            this.handlers = new Array(ExidyMemory_3.MEMORY_SIZE_IN_BYTES >> this._ignoreBits);
             this.handlers.fill(new ExidyMemoryNone_1.default());
         }
         readByte(address) {
-            return this.handlers[address].readByte(address);
+            return this.handlers[address >> this._ignoreBits].readByte(address);
         }
         writeByte(address, data) {
-            this.handlers[address].writeByte(address, data);
+            this.handlers[address >> this._ignoreBits].writeByte(address, data);
+        }
+        checkGranularity(address) {
+            return ((address >> this._ignoreBits) << this._ignoreBits) === address;
         }
         setHandler(address, length, handler) {
-            this.handlers.fill(handler, address, address + length);
+            if (!this.checkGranularity(address) || !this.checkGranularity(length)) {
+                console.log('WARNING: handler granularity missmatch');
+                console.log(address.toString(16) + " " + length.toString(16));
+            }
+            this.handlers.fill(handler, address >> this._ignoreBits, (address + length) >> this._ignoreBits);
         }
     }
     class MemorySystem {
@@ -669,7 +677,7 @@ define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive"], function (re
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     const MEM_DISK_REG_START = 0xBE00;
-    const MEM_DISK_REG_LEN = 3;
+    const MEM_DISK_REG_LEN = 128;
     class ExidyDiskSystem {
         constructor(memorySystem) {
             this._drives = new Array(4);

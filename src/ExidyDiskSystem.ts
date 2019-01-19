@@ -6,7 +6,7 @@ import Memory from './ExidyMemory';
 import MemorySystem from './ExidyMemorySystem';
 
 const MEM_DISK_REG_START = 0xBE00;
-const MEM_DISK_REG_LEN = 3;
+const MEM_DISK_REG_LEN = 128;
 
 
 export default class ExidyDiskSystem implements Memory {

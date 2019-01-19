@@ -10,22 +10,36 @@ import ExidyScreen from './ExidyScreen';
 
 class Multiplexor implements Memory {
 
-    private handlers = new Array<Memory>(MEMORY_SIZE_IN_BYTES);
+    private _ignoreBits: number = 7;
+
+    private handlers: Array<Memory>;
 
     public constructor() {
+        this.handlers = new Array<Memory>(MEMORY_SIZE_IN_BYTES >> this._ignoreBits);
         this.handlers.fill(new NoMemory());
     }
 
     readByte(address: number): number {
-        return this.handlers[address].readByte(address);
+        return this.handlers[address >> this._ignoreBits].readByte(address);
     }
 
     writeByte(address: number, data: number): void {
-        this.handlers[address].writeByte(address, data);
+        this.handlers[address >> this._ignoreBits].writeByte(address, data);
+    }
+
+    private checkGranularity(address: number): boolean {
+        return ((address >> this._ignoreBits) << this._ignoreBits) === address;
     }
 
     public setHandler(address: number, length: number, handler: Memory): void {
-        this.handlers.fill(handler, address, address + length);
+        if (!this.checkGranularity(address) || !this.checkGranularity(length)) {
+          console.log('WARNING: handler granularity missmatch');
+          console.log(address.toString(16) + " " + length.toString(16));
+        }
+        this.handlers.fill(
+          handler,
+          address >> this._ignoreBits,
+          (address + length) >> this._ignoreBits);
     }
 }
 

@@ -1,7 +1,7 @@
 'use strict';
 import ExidyDiskDrive from './ExidyDiskDrive';
 const MEM_DISK_REG_START = 0xBE00;
-const MEM_DISK_REG_LEN = 3;
+const MEM_DISK_REG_LEN = 128;
 export default class ExidyDiskSystem {
     constructor(memorySystem) {
         this._drives = new Array(4);

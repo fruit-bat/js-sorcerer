@@ -7,17 +7,25 @@ import ExidyCharacters from './ExidyCharacters';
 import ExidyScreen from './ExidyScreen';
 class Multiplexor {
     constructor() {
-        this.handlers = new Array(MEMORY_SIZE_IN_BYTES);
+        this._ignoreBits = 7;
+        this.handlers = new Array(MEMORY_SIZE_IN_BYTES >> this._ignoreBits);
         this.handlers.fill(new NoMemory());
     }
     readByte(address) {
-        return this.handlers[address].readByte(address);
+        return this.handlers[address >> this._ignoreBits].readByte(address);
     }
     writeByte(address, data) {
-        this.handlers[address].writeByte(address, data);
+        this.handlers[address >> this._ignoreBits].writeByte(address, data);
+    }
+    checkGranularity(address) {
+        return ((address >> this._ignoreBits) << this._ignoreBits) === address;
     }
     setHandler(address, length, handler) {
-        this.handlers.fill(handler, address, address + length);
+        if (!this.checkGranularity(address) || !this.checkGranularity(length)) {
+            console.log('WARNING: handler granularity missmatch');
+            console.log(address.toString(16) + " " + length.toString(16));
+        }
+        this.handlers.fill(handler, address >> this._ignoreBits, (address + length) >> this._ignoreBits);
     }
 }
 export default class MemorySystem {
