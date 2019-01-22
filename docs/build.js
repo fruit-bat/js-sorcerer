@@ -166,7 +166,7 @@ define("ExidyKeyboard", ["require", "exports", "ExidyKey"], function (require, e
                 new ExidyKey_1.default('SHIFT LOCK', 0, 3),
                 new ExidyKey_1.default('ESC', 0, 0),
                 new ExidyKey_1.default('SPACE', 1, 2),
-                new ExidyKey_1.default('unknown3', 1, 4),
+                new ExidyKey_1.default('RUN STOP', 1, 4),
                 new ExidyKey_1.default('Delete', 15, 0),
                 new ExidyKey_1.default('0', 9, 4),
                 new ExidyKey_1.default('1', 2, 4),

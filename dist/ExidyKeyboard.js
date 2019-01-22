@@ -15,7 +15,7 @@ export default class Keyboard {
             new ExidyKey('SHIFT LOCK', 0, 3),
             new ExidyKey('ESC', 0, 0),
             new ExidyKey('SPACE', 1, 2),
-            new ExidyKey('unknown3', 1, 4),
+            new ExidyKey('RUN STOP', 1, 4),
             new ExidyKey('Delete', 15, 0),
             new ExidyKey('0', 9, 4),
             new ExidyKey('1', 2, 4),
