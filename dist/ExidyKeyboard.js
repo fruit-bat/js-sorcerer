@@ -54,7 +54,7 @@ export default class Keyboard {
             new ExidyKey('X', 2, 0),
             new ExidyKey('Y', 6, 3),
             new ExidyKey('Z', 2, 1),
-            new ExidyKey('Graphics', 0, 1),
+            new ExidyKey('GRAPHIC', 0, 1),
             new ExidyKey('Clear', 1, 0),
             new ExidyKey('Repeat', 1, 1),
             new ExidyKey('^', 11, 3),

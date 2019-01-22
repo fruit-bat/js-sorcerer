@@ -205,7 +205,7 @@ define("ExidyKeyboard", ["require", "exports", "ExidyKey"], function (require, e
                 new ExidyKey_1.default('X', 2, 0),
                 new ExidyKey_1.default('Y', 6, 3),
                 new ExidyKey_1.default('Z', 2, 1),
-                new ExidyKey_1.default('Graphics', 0, 1),
+                new ExidyKey_1.default('GRAPHIC', 0, 1),
                 new ExidyKey_1.default('Clear', 1, 0),
                 new ExidyKey_1.default('Repeat', 1, 1),
                 new ExidyKey_1.default('^', 11, 3),
