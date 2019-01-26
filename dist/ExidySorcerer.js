@@ -22,6 +22,7 @@ export default class ExidySorcerer {
         this.centronicsSystem = new CentronicsSystem();
         this._keyboard = new Keyboard();
         this._govern = true;
+        this._running = false;
         this.filesystem = filesystem;
         this.memorySystem = new MemorySystem();
         this.io = new IoSystem();
@@ -133,7 +134,13 @@ export default class ExidySorcerer {
         }
         return c;
     }
+    stop() {
+        this._running = false;
+    }
     run() {
+        if (this._running)
+            return;
+        this._running = true;
         let t = 0;
         let g = 100;
         let c = 0;
@@ -143,7 +150,10 @@ export default class ExidySorcerer {
         }, d);
         this.ready.then(() => {
             setInterval(() => {
-                if (this._govern) {
+                if (!this._running) {
+                    clearInterval(interval);
+                }
+                else if (this._govern) {
                     t += g * 2000 - c;
                     c = 0;
                     if (t > 100000 && d > 0) {

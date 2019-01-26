@@ -142,8 +142,8 @@ Z80.prototype.interrupt = function (non_maskable, data) {
         else if (this.imode === 2) {
             this.push_word(this.pc);
             let vector_address = ((this.i << 8) | data);
-            this.pc = this.core.read_mem_byte(vector_address) |
-                (this.core.read_mem_byte((vector_address + 1) & 0xffff) << 8);
+            this.pc = this.core.mem_read(vector_address) |
+                (this.core.mem_read((vector_address + 1) & 0xffff) << 8);
             this.cycle_counter += 19;
         }
     }
@@ -161,8 +161,6 @@ let get_operand = function (opcode) {
 Z80.prototype.decode_instruction = function (opcode) {
     if (opcode === 0x76) {
         this.halted = true;
-        this.iff1 = 1;
-        this.iff2 = 1;
     }
     else if ((opcode >= 0x40) && (opcode < 0x80)) {
         let operand = get_operand.call(this, opcode);
@@ -1430,6 +1428,12 @@ Z80.prototype.ed_instructions[0x56] = function () {
 Z80.prototype.ed_instructions[0x57] = function () {
     this.a = this.i;
     this.flags.P = this.iff2;
+    this.flags.S = (this.a & 0x80) !== 0;
+    this.flags.X = (this.a & 0x08) !== 0;
+    this.flags.Y = (this.a & 0x20) !== 0;
+    this.flags.Z = this.a === 0;
+    this.flags.H = 0;
+    this.flags.N = 0;
 };
 Z80.prototype.ed_instructions[0x58] = function () {
     this.e = this.do_in((this.b << 8) | this.c);
@@ -1461,6 +1465,12 @@ Z80.prototype.ed_instructions[0x5e] = function () {
 Z80.prototype.ed_instructions[0x5f] = function () {
     this.a = this.r;
     this.flags.P = this.iff2;
+    this.flags.S = (this.a & 0x80) !== 0;
+    this.flags.X = (this.a & 0x08) !== 0;
+    this.flags.Y = (this.a & 0x20) !== 0;
+    this.flags.Z = this.a === 0;
+    this.flags.H = 0;
+    this.flags.N = 0;
 };
 Z80.prototype.ed_instructions[0x60] = function () {
     this.h = this.do_in((this.b << 8) | this.c);
@@ -2063,7 +2073,7 @@ Z80.prototype.cycle_counts = [
     5, 10, 10, 10, 10, 11, 7, 11, 5, 10, 10, 0, 10, 17, 7, 11,
     5, 10, 10, 11, 10, 11, 7, 11, 5, 4, 10, 11, 10, 0, 7, 11,
     5, 10, 10, 19, 10, 11, 7, 11, 5, 4, 10, 4, 10, 0, 7, 11,
-    5, 10, 10, 4, 10, 11, 7, 11, 5, 4, 10, 4, 10, 0, 7, 11
+    5, 10, 10, 4, 10, 11, 7, 11, 5, 6, 10, 4, 10, 0, 7, 11
 ];
 Z80.prototype.cycle_counts_ed = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -2133,6 +2143,9 @@ export class ExidyZ80 {
     }
     executeInstruction() {
         return this.cpu.run_instruction();
+    }
+    interrupt(non_maskable, value) {
+        this.cpu.interrupt(non_maskable, value);
     }
     load(data) {
         this.cpu.load({

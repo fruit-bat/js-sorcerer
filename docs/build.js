@@ -759,7 +759,7 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryNone", "ExidyMemo
         }
         ejectRom(address, length) {
             this.multplexor.setHandler(address, length, this.ram);
-            this._memory.fill(255, address, address + length);
+            this._memory.fill(0, address, address + length);
         }
         get memory() {
             return this.multplexor;
@@ -1236,8 +1236,8 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
             else if (this.imode === 2) {
                 this.push_word(this.pc);
                 let vector_address = ((this.i << 8) | data);
-                this.pc = this.core.read_mem_byte(vector_address) |
-                    (this.core.read_mem_byte((vector_address + 1) & 0xffff) << 8);
+                this.pc = this.core.mem_read(vector_address) |
+                    (this.core.mem_read((vector_address + 1) & 0xffff) << 8);
                 this.cycle_counter += 19;
             }
         }
@@ -1255,8 +1255,6 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     Z80.prototype.decode_instruction = function (opcode) {
         if (opcode === 0x76) {
             this.halted = true;
-            this.iff1 = 1;
-            this.iff2 = 1;
         }
         else if ((opcode >= 0x40) && (opcode < 0x80)) {
             let operand = get_operand.call(this, opcode);
@@ -2524,6 +2522,12 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     Z80.prototype.ed_instructions[0x57] = function () {
         this.a = this.i;
         this.flags.P = this.iff2;
+        this.flags.S = (this.a & 0x80) !== 0;
+        this.flags.X = (this.a & 0x08) !== 0;
+        this.flags.Y = (this.a & 0x20) !== 0;
+        this.flags.Z = this.a === 0;
+        this.flags.H = 0;
+        this.flags.N = 0;
     };
     Z80.prototype.ed_instructions[0x58] = function () {
         this.e = this.do_in((this.b << 8) | this.c);
@@ -2555,6 +2559,12 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
     Z80.prototype.ed_instructions[0x5f] = function () {
         this.a = this.r;
         this.flags.P = this.iff2;
+        this.flags.S = (this.a & 0x80) !== 0;
+        this.flags.X = (this.a & 0x08) !== 0;
+        this.flags.Y = (this.a & 0x20) !== 0;
+        this.flags.Z = this.a === 0;
+        this.flags.H = 0;
+        this.flags.N = 0;
     };
     Z80.prototype.ed_instructions[0x60] = function () {
         this.h = this.do_in((this.b << 8) | this.c);
@@ -3157,7 +3167,7 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         5, 10, 10, 10, 10, 11, 7, 11, 5, 10, 10, 0, 10, 17, 7, 11,
         5, 10, 10, 11, 10, 11, 7, 11, 5, 4, 10, 11, 10, 0, 7, 11,
         5, 10, 10, 19, 10, 11, 7, 11, 5, 4, 10, 4, 10, 0, 7, 11,
-        5, 10, 10, 4, 10, 11, 7, 11, 5, 4, 10, 4, 10, 0, 7, 11
+        5, 10, 10, 4, 10, 11, 7, 11, 5, 6, 10, 4, 10, 0, 7, 11
     ];
     Z80.prototype.cycle_counts_ed = [
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -3227,6 +3237,9 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         }
         executeInstruction() {
             return this.cpu.run_instruction();
+        }
+        interrupt(non_maskable, value) {
+            this.cpu.interrupt(non_maskable, value);
         }
         load(data) {
             this.cpu.load({
@@ -3411,6 +3424,7 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
             this.centronicsSystem = new ExidyCentronicsSystem_1.default();
             this._keyboard = new ExidyKeyboard_1.default();
             this._govern = true;
+            this._running = false;
             this.filesystem = filesystem;
             this.memorySystem = new ExidyMemorySystem_1.default();
             this.io = new ExidyIo_1.IoSystem();
@@ -3522,7 +3536,13 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
             }
             return c;
         }
+        stop() {
+            this._running = false;
+        }
         run() {
+            if (this._running)
+                return;
+            this._running = true;
             let t = 0;
             let g = 100;
             let c = 0;
@@ -3532,7 +3552,10 @@ define("ExidySorcerer", ["require", "exports", "ExidyZ80", "DropZone", "ExidyMem
             }, d);
             this.ready.then(() => {
                 setInterval(() => {
-                    if (this._govern) {
+                    if (!this._running) {
+                        clearInterval(interval);
+                    }
+                    else if (this._govern) {
                         t += g * 2000 - c;
                         c = 0;
                         if (t > 100000 && d > 0) {

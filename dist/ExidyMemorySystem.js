@@ -58,7 +58,7 @@ export default class MemorySystem {
     }
     ejectRom(address, length) {
         this.multplexor.setHandler(address, length, this.ram);
-        this._memory.fill(255, address, address + length);
+        this._memory.fill(0, address, address + length);
     }
     get memory() {
         return this.multplexor;

@@ -275,8 +275,8 @@ Z80.prototype.interrupt = function(non_maskable, data) {
          //  but it doesn't appear that this is actually the case on the hardware,
          //  so we don't attempt to enforce that here.
          let vector_address = ((this.i << 8) | data);
-         this.pc = this.core.read_mem_byte(vector_address) |
-                   (this.core.read_mem_byte((vector_address + 1) & 0xffff) << 8);
+         this.pc = this.core.mem_read(vector_address) |
+                   (this.core.mem_read((vector_address + 1) & 0xffff) << 8);
 
          this.cycle_counter += 19;
       }
@@ -310,8 +310,6 @@ Z80.prototype.decode_instruction = function(opcode) {
    //  by falling where LD (HL), (HL) ought to be.
    if (opcode === 0x76) {
       this.halted = true;
-      this.iff1 = 1;
-      this.iff2 = 1;
    }
    else if ((opcode >= 0x40) && (opcode < 0x80)) {
       // This entire range is all 8-bit register loads.
@@ -2875,7 +2873,7 @@ Z80.prototype.cycle_counts = [
     5, 10, 10, 10, 10, 11,  7, 11,  5, 10, 10,  0, 10, 17,  7, 11,
     5, 10, 10, 11, 10, 11,  7, 11,  5,  4, 10, 11, 10,  0,  7, 11,
     5, 10, 10, 19, 10, 11,  7, 11,  5,  4, 10,  4, 10,  0,  7, 11,
-    5, 10, 10,  4, 10, 11,  7, 11,  5,  4, 10,  4, 10,  0,  7, 11
+    5, 10, 10,  4, 10, 11,  7, 11,  5,  6, 10,  4, 10,  0,  7, 11
 ];
 
 Z80.prototype.cycle_counts_ed = [
