@@ -90,7 +90,7 @@ export default class MemorySystem {
 
     public ejectRom(address: number, length: number): void {
         this.multplexor.setHandler(address, length, this.ram);
-        this._memory.fill(255, address, address + length);
+        this._memory.fill(0, address, address + length);
     }
 
     public get memory(): Memory {

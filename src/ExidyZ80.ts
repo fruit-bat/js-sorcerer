@@ -2043,6 +2043,12 @@ Z80.prototype.ed_instructions[0x56] = function() {
 Z80.prototype.ed_instructions[0x57] = function() {
    this.a = this.i;
    this.flags.P = this.iff2;
+   this.flags.S = (this.a & 0x80) !== 0;
+   this.flags.X = (this.a & 0x08) !== 0;
+   this.flags.Y = (this.a & 0x20) !== 0;
+   this.flags.Z = this.a === 0;
+   this.flags.H = 0;
+   this.flags.N = 0;
 };
 // 0x58 : IN E, (C)
 Z80.prototype.ed_instructions[0x58] = function() {
@@ -2083,6 +2089,12 @@ Z80.prototype.ed_instructions[0x5e] = function() {
 Z80.prototype.ed_instructions[0x5f] = function() {
    this.a = this.r;
    this.flags.P = this.iff2;
+   this.flags.S = (this.a & 0x80) !== 0;
+   this.flags.X = (this.a & 0x08) !== 0;
+   this.flags.Y = (this.a & 0x20) !== 0;
+   this.flags.Z = this.a === 0;
+   this.flags.H = 0;
+   this.flags.N = 0;
 };
 // 0x60 : IN H, (C)
 Z80.prototype.ed_instructions[0x60] = function() {
@@ -2935,7 +2947,7 @@ export class ExidyZ80 {
         memory: Memory,
         input: Input,
         output: Output) {
-        
+
         this.cpu = new Z80({
             mem_read: (address) => { return memory.readByte(address); },
             mem_write: (address, data) => { memory.writeByte(address, data); },
@@ -2950,6 +2962,10 @@ export class ExidyZ80 {
 
     public executeInstruction(): number {
         return this.cpu.run_instruction();
+    }
+
+    public interrupt(non_maskable, value) {
+      this.cpu.interrupt(non_maskable, value);
     }
 
     public load(data: Uint8Array): void {

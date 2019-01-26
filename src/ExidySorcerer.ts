@@ -36,6 +36,7 @@ export default class ExidySorcerer {
     private centronicsSystem = new CentronicsSystem();
     private _keyboard = new Keyboard();
     private _govern: Boolean = true;
+    private _running: Boolean = false;
 
     public constructor(
         filesystem: ExidyFile) {
@@ -167,11 +168,18 @@ export default class ExidySorcerer {
                 this.cycles -= CYCLES_PER_DISK_TICK;
                 this.diskSystem.tick();
             }
+            //this.cpu.interrupt(false, 0);
         }
         return c;
     }
 
+    public stop(): void {
+      this._running = false;
+    }
+
     public run(): void {
+        if(this._running) return;
+        this._running = true;
         let t = 0;
         let g = 100;
         let c = 0;
@@ -181,7 +189,10 @@ export default class ExidySorcerer {
         }, d);
         this.ready.then(() => {
             setInterval(() => {
-                if (this._govern) {
+                if (!this._running) {
+                  clearInterval(interval);
+                }
+                else if (this._govern) {
                   t += g * 2000 - c;
                   c = 0;
                   if (t > 100000 && d > 0) {
