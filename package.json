@@ -44,6 +44,5 @@
     "vinyl-source-stream": "^1.1.0"
   },
   "dependencies": {
-    "z80": "dimiro1/Z80-js"
   }
 }
