@@ -261,7 +261,6 @@ define("ExidyKeyboard", ["require", "exports", "ExidyKey"], function (require, e
         pressKey(keyId) {
             const key = this._keymap[keyId];
             if (!this.isPressed(key.row, key.col)) {
-                console.log('pressing ' + key.row + ' ' + key.col);
                 this.press(key.row, key.col);
                 if (this.listener)
                     this.listener(key.id, true);
@@ -378,7 +377,6 @@ define("ExidyBrowserKeyboard", ["require", "exports"], function (require, export
         }
         browserKeyDown(key) {
             const keyId = KEYCODE_TO_KEYID[key];
-            console.log(key + ' ' + JSON.stringify(keyId));
             if (keyId) {
                 this._keyboard.pressKey(keyId);
             }

@@ -126,7 +126,6 @@ export default class Keyboard implements Input, Output {
     public pressKey(keyId: string): void {
         const key = this._keymap[keyId];
         if (!this.isPressed(key.row, key.col)) {
-            console.log('pressing ' + key.row + ' ' + key.col);
             this.press(key.row, key.col);
             if (this.listener) this.listener(key.id, true);
         }

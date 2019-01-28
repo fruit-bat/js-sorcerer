@@ -105,7 +105,6 @@ export default class BrowserKeyboard {
 
     public browserKeyDown(key: number): void {
         const keyId = KEYCODE_TO_KEYID[key];
-        console.log(key + ' ' + JSON.stringify(keyId));
         if (keyId) {
             this._keyboard.pressKey(keyId);
         }

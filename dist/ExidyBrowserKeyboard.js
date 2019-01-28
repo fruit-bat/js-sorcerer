@@ -96,7 +96,6 @@ export default class BrowserKeyboard {
     }
     browserKeyDown(key) {
         const keyId = KEYCODE_TO_KEYID[key];
-        console.log(key + ' ' + JSON.stringify(keyId));
         if (keyId) {
             this._keyboard.pressKey(keyId);
         }
