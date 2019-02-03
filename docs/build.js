@@ -1088,6 +1088,38 @@ define("ExidyIo", ["require", "exports"], function (require, exports) {
     }
     exports.IoSystem = IoSystem;
 });
+define("ExidyMonostable", ["require", "exports"], function (require, exports) {
+    'use strict';
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class ExidyMonostable {
+        constructor(periodMillis, listener) {
+            this._activate = false;
+            this._interval = null;
+            this._periodMillis = periodMillis;
+            this._listener = listener;
+        }
+        activate() {
+            if (this._interval) {
+                this._activate = true;
+            }
+            else {
+                this._activate = false;
+                this._listener(true);
+                this._interval = setInterval(() => {
+                    if (this._activate) {
+                        this._activate = false;
+                    }
+                    else {
+                        clearInterval(this._interval);
+                        this._interval = null;
+                        this._listener(false);
+                    }
+                }, this._periodMillis);
+            }
+        }
+    }
+    exports.default = ExidyMonostable;
+});
 define("ExidyZ80", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -3370,14 +3402,19 @@ define("ExidyTapeUnitMotorControl", ["require", "exports"], function (require, e
         constructor(motorMask) {
             this._motorOn = false;
             this._baud = 300;
+            this.listener = null;
             this._motorMask = motorMask;
         }
         writeByte(data) {
             let motorOn = (this._motorMask & data) !== 0;
             if (motorOn && !this._motorOn) {
+                if (this.listener)
+                    this.listener(true);
                 this._baud = (data & 0x40) === 0 ? 300 : 1200;
             }
             else if (!motorOn && this._motorOn) {
+                if (this.listener)
+                    this.listener(false);
             }
             this._motorOn = motorOn;
         }
@@ -3390,12 +3427,18 @@ define("ExidyTapeUnitMotorControl", ["require", "exports"], function (require, e
     }
     exports.default = TapeUnitMotorControl;
 });
-define("ExidyTapeUnit", ["require", "exports"], function (require, exports) {
+define("ExidyTapeUnit", ["require", "exports", "ExidyMonostable"], function (require, exports, ExidyMonostable_1) {
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class TapeUnit {
         constructor(motorControl) {
+            this.recordListener = null;
             this._motorControl = motorControl;
+            this._recordMonostable = new ExidyMonostable_1.default(2000, recording => {
+                if (this.recordListener) {
+                    this.recordListener(recording);
+                }
+            });
         }
         get readyForRead() {
             return this.tape && this._motorControl.motorOn;
@@ -3403,7 +3446,14 @@ define("ExidyTapeUnit", ["require", "exports"], function (require, exports) {
         get readyForWrite() {
             return this.tape && this._motorControl.motorOn;
         }
+        set motorListener(listener) {
+            this._motorControl.listener = listener;
+        }
+        get motorListener() {
+            return this._motorControl.listener;
+        }
         writeByte(data) {
+            this._recordMonostable.activate();
             if (this.readyForWrite) {
                 this.tape.writeByte(this._motorControl.baud, data);
             }

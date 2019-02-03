@@ -6,6 +6,8 @@ export default class TapeUnitMotorControl {
     private _baud: number = 300;
     private _motorMask: number;
 
+    public listener: (running: boolean) => void = null;
+
     constructor(motorMask: number) {
         this._motorMask = motorMask;
     }
@@ -14,13 +16,13 @@ export default class TapeUnitMotorControl {
         let motorOn = (this._motorMask & data) !== 0;
 
         if (motorOn && !this._motorOn) {
-            // console.log('Tape motor on');
-            // TODO Notify listener
+            // Tape motor on
+            if (this.listener) this.listener(true);
             this._baud = (data & 0x40) === 0 ? 300 : 1200;
         }
         else if (!motorOn && this._motorOn) {
-            // TODO Notify listener
-            // console.log('Tape motor off');
+            // Tape motor off
+            if (this.listener) this.listener(false);
         }
         this._motorOn = motorOn;
     }
