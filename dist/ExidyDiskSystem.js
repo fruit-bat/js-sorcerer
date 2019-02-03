@@ -12,7 +12,7 @@ export default class ExidyDiskSystem {
         }
         memorySystem.setHandler(MEM_DISK_REG_START, MEM_DISK_REG_LEN, this);
     }
-    getExidyDiskDrive(drive) {
+    getDiskDrive(drive) {
         return this._drives[drive];
     }
     insertDisk(disk, drive) {

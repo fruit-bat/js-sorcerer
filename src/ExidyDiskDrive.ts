@@ -2,6 +2,7 @@
 
 import ExidyDisk from './ExidyDisk';
 import { SECTORS_PER_TRACK, NUMBER_OF_TRACKS, BYTES_PER_SECTOR } from './ExidyDiskConsts';
+import Monostable from './ExidyMonostable';
 
 const ACTIVE_FOR_TICKS = 400;
 
@@ -15,9 +16,21 @@ export default class ExidyDiskDrive {
     private _sectorIndex: number = 0;
     private _writeIndex: number = 0;
     private _unitNumber: number;
+    private _writeMonostable: Monostable;
+
+    public motorListener: (running: boolean) => void = null;
+    public writeListener: (running: boolean) => void = null;
 
     public constructor(unitNumber: number) {
         this._unitNumber = unitNumber;
+        this._writeMonostable = new Monostable(
+            2000,
+            writing => {
+                if (this.writeListener) {
+                    this.writeListener(writing);
+                }
+            }
+        );
     }
 
     public getUnitLetter(): string {
@@ -61,8 +74,8 @@ export default class ExidyDiskDrive {
     }
 
     public activate(): void {
-        if (this._activeCount === 0 && this._disk !== null) {
-            this._disk.activate();
+        if (this._activeCount === 0) {
+            if (this.motorListener) this.motorListener(true);
             this._activeCount = ACTIVE_FOR_TICKS;
         }
     }
@@ -109,6 +122,7 @@ export default class ExidyDiskDrive {
         if ( this.active() ) {
             this._activeCount = ACTIVE_FOR_TICKS;
         }
+        this._writeMonostable.activate();
         this._disk.write( this._trackNumber, this._sectorNumber, this._writeIndex++, b );
     }
 
@@ -158,9 +172,7 @@ export default class ExidyDiskDrive {
             this._activeCount--;
 
             if ( !this.active() ) {
-                if ( this._disk !== null ) {
-                    this._disk.deactivate();
-                }
+                if (this.motorListener) this.motorListener(false);
             }
         }
     }

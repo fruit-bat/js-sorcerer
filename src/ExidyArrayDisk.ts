@@ -22,10 +22,4 @@ export default class ExidyArrayDisk implements ExidyDisk {
     write(track: number, sector: number, offset: number, data: number): void {
         this._data[this.toIndex(track, sector, offset)] = data;
     }
-
-    activate(): void {
-    }
-
-    deactivate(): void {
-    }
 }

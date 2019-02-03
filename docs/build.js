@@ -87,10 +87,6 @@ define("ExidyArrayDisk", ["require", "exports", "ExidyDiskConsts"], function (re
         write(track, sector, offset, data) {
             this._data[this.toIndex(track, sector, offset)] = data;
         }
-        activate() {
-        }
-        deactivate() {
-        }
     }
     exports.default = ExidyArrayDisk;
 });
@@ -477,7 +473,39 @@ define("ExidyCharacters", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"
     }
     exports.default = ExidyCharacters;
 });
-define("ExidyDiskDrive", ["require", "exports", "ExidyDiskConsts"], function (require, exports, ExidyDiskConsts_2) {
+define("ExidyMonostable", ["require", "exports"], function (require, exports) {
+    'use strict';
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class ExidyMonostable {
+        constructor(periodMillis, listener) {
+            this._activate = false;
+            this._interval = null;
+            this._periodMillis = periodMillis;
+            this._listener = listener;
+        }
+        activate() {
+            if (this._interval) {
+                this._activate = true;
+            }
+            else {
+                this._activate = false;
+                this._listener(true);
+                this._interval = setInterval(() => {
+                    if (this._activate) {
+                        this._activate = false;
+                    }
+                    else {
+                        clearInterval(this._interval);
+                        this._interval = null;
+                        this._listener(false);
+                    }
+                }, this._periodMillis);
+            }
+        }
+    }
+    exports.default = ExidyMonostable;
+});
+define("ExidyDiskDrive", ["require", "exports", "ExidyDiskConsts", "ExidyMonostable"], function (require, exports, ExidyDiskConsts_2, ExidyMonostable_1) {
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     const ACTIVE_FOR_TICKS = 400;
@@ -490,7 +518,14 @@ define("ExidyDiskDrive", ["require", "exports", "ExidyDiskConsts"], function (re
             this._disk = null;
             this._sectorIndex = 0;
             this._writeIndex = 0;
+            this.motorListener = null;
+            this.writeListener = null;
             this._unitNumber = unitNumber;
+            this._writeMonostable = new ExidyMonostable_1.default(2000, writing => {
+                if (this.writeListener) {
+                    this.writeListener(writing);
+                }
+            });
         }
         getUnitLetter() {
             return 'ABCD'.charAt(this._unitNumber);
@@ -524,8 +559,9 @@ define("ExidyDiskDrive", ["require", "exports", "ExidyDiskConsts"], function (re
             return this._activeCount > 0;
         }
         activate() {
-            if (this._activeCount === 0 && this._disk !== null) {
-                this._disk.activate();
+            if (this._activeCount === 0) {
+                if (this.motorListener)
+                    this.motorListener(true);
                 this._activeCount = ACTIVE_FOR_TICKS;
             }
         }
@@ -568,6 +604,7 @@ define("ExidyDiskDrive", ["require", "exports", "ExidyDiskConsts"], function (re
             if (this.active()) {
                 this._activeCount = ACTIVE_FOR_TICKS;
             }
+            this._writeMonostable.activate();
             this._disk.write(this._trackNumber, this._sectorNumber, this._writeIndex++, b);
         }
         readReg0() {
@@ -613,9 +650,8 @@ define("ExidyDiskDrive", ["require", "exports", "ExidyDiskConsts"], function (re
                 this._newSector = true;
                 this._activeCount--;
                 if (!this.active()) {
-                    if (this._disk !== null) {
-                        this._disk.deactivate();
-                    }
+                    if (this.motorListener)
+                        this.motorListener(false);
                 }
             }
         }
@@ -792,7 +828,7 @@ define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive"], function (re
             }
             memorySystem.setHandler(MEM_DISK_REG_START, MEM_DISK_REG_LEN, this);
         }
-        getExidyDiskDrive(drive) {
+        getDiskDrive(drive) {
             return this._drives[drive];
         }
         insertDisk(disk, drive) {
@@ -1087,38 +1123,6 @@ define("ExidyIo", ["require", "exports"], function (require, exports) {
         }
     }
     exports.IoSystem = IoSystem;
-});
-define("ExidyMonostable", ["require", "exports"], function (require, exports) {
-    'use strict';
-    Object.defineProperty(exports, "__esModule", { value: true });
-    class ExidyMonostable {
-        constructor(periodMillis, listener) {
-            this._activate = false;
-            this._interval = null;
-            this._periodMillis = periodMillis;
-            this._listener = listener;
-        }
-        activate() {
-            if (this._interval) {
-                this._activate = true;
-            }
-            else {
-                this._activate = false;
-                this._listener(true);
-                this._interval = setInterval(() => {
-                    if (this._activate) {
-                        this._activate = false;
-                    }
-                    else {
-                        clearInterval(this._interval);
-                        this._interval = null;
-                        this._listener(false);
-                    }
-                }, this._periodMillis);
-            }
-        }
-    }
-    exports.default = ExidyMonostable;
 });
 define("ExidyZ80", ["require", "exports"], function (require, exports) {
     "use strict";
@@ -3427,14 +3431,14 @@ define("ExidyTapeUnitMotorControl", ["require", "exports"], function (require, e
     }
     exports.default = TapeUnitMotorControl;
 });
-define("ExidyTapeUnit", ["require", "exports", "ExidyMonostable"], function (require, exports, ExidyMonostable_1) {
+define("ExidyTapeUnit", ["require", "exports", "ExidyMonostable"], function (require, exports, ExidyMonostable_2) {
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class TapeUnit {
         constructor(motorControl) {
             this.recordListener = null;
             this._motorControl = motorControl;
-            this._recordMonostable = new ExidyMonostable_1.default(2000, recording => {
+            this._recordMonostable = new ExidyMonostable_2.default(2000, recording => {
                 if (this.recordListener) {
                     this.recordListener(recording);
                 }

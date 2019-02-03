@@ -23,7 +23,7 @@ export default class ExidyDiskSystem implements Memory {
         memorySystem.setHandler(MEM_DISK_REG_START, MEM_DISK_REG_LEN, this);
     }
 
-    public getExidyDiskDrive(drive: number): ExidyDiskDrive {
+    public getDiskDrive(drive: number): ExidyDiskDrive {
         return this._drives[ drive ];
     }
 

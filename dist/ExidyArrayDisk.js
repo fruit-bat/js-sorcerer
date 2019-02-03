@@ -13,8 +13,4 @@ export default class ExidyArrayDisk {
     write(track, sector, offset, data) {
         this._data[this.toIndex(track, sector, offset)] = data;
     }
-    activate() {
-    }
-    deactivate() {
-    }
 }
