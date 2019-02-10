@@ -117,6 +117,9 @@ export default class ExidySorcerer {
     getMem(start, length) {
         return this.memorySystem.getMem(start, length);
     }
+    getMemRegions() {
+        return this.memorySystem.getRegions();
+    }
     reset() {
         this.cycles = 0;
         this.cpu.reset(0xE000);

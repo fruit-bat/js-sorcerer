@@ -3,6 +3,13 @@
 import Ram from './ExidyMemoryRam';
 import {CHARS_START} from './ExidyMemory';
 
+//
+// 0xF800 - 0xFBFF - ASCII ROM character set
+// 0xFC00 - 0xFDFF - Standard graphics
+// 0xFE00 - 0xFFFF - User defined graphics
+//
+// TODO Split into RAM/ROM segments
+//
 export default class ExidyCharacters extends Ram {
 
     private charsCanvas: HTMLCanvasElement;
@@ -15,7 +22,7 @@ export default class ExidyCharacters extends Ram {
         memory: Uint8Array,
         charsCanvas: HTMLCanvasElement,
         charUpdated: (char: number, row: number) => void) {
-        
+
         super(memory);
         this.charsCanvas = charsCanvas;
         this.byteCanvas = <HTMLCanvasElement>document.createElement('canvas');

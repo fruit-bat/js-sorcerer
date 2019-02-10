@@ -1,8 +1,9 @@
 'use strict';
 
-import Memory from './ExidyMemory';
+import MemoryTyped from './ExidyMemoryTyped';
+import MemoryType from './ExidyMemoryType';
 
-export default class NoMemory implements Memory {
+export default class NoMemory implements MemoryTyped {
 
     public constructor() {
     }
@@ -12,5 +13,9 @@ export default class NoMemory implements Memory {
     }
 
     writeByte(address: number, data: number): void {
+    }
+
+    memoryType(): MemoryType {
+      return MemoryType.None;
     }
 }

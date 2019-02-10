@@ -13,6 +13,7 @@ import TapeSystem from './ExidyTapeSystem';
 import ArrayTape from './ExidyArrayTape';
 import Centronics from './ExidyCentronics';
 import CentronicsSystem from './ExidyCentronicsSystem';
+import MemoryRegion from './ExidyMemoryRegion';
 
 const defaultRoms = [
     { name: 'exmo1-1.dat', address: 0xE000 },
@@ -151,6 +152,10 @@ export default class ExidySorcerer {
 
     public getMem(start, length): Uint8Array {
       return this.memorySystem.getMem(start, length);
+    }
+
+    public getMemRegions(): Array<MemoryRegion> {
+      return this.memorySystem.getRegions();
     }
 
     public reset(): void {

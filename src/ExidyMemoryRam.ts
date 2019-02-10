@@ -1,8 +1,10 @@
 'use strict';
 
-import Memory from './ExidyMemory';
 
-export default class Ram implements Memory {
+import MemoryTyped from './ExidyMemoryTyped';
+import MemoryType from './ExidyMemoryType';
+
+export default class Ram implements MemoryTyped {
 
     private memory: Uint8Array;
 
@@ -12,9 +14,13 @@ export default class Ram implements Memory {
 
     readByte(address: number): number {
         return this.memory[address];
-    };
+    }
 
     writeByte(address: number, data: number): void {
         this.memory[address] = data;
-    };
+    }
+
+    memoryType(): MemoryType {
+      return MemoryType.Ram;
+    }
 }
