@@ -1,7 +1,7 @@
 'use strict';
 import MemoryRegion from './ExidyMemoryRegion';
 import NoMemory from './ExidyMemoryNone';
-import { MEMORY_SIZE_IN_BYTES, CHARS_START, CHARS_SIZE_BYTES, SCREEN_START, SCREEN_SIZE_BYTES } from './ExidyMemory';
+import { MEMORY_SIZE_IN_BYTES, SCREEN_START, SCREEN_SIZE_BYTES } from './ExidyMemory';
 import Ram from './ExidyMemoryRam';
 import Rom from './ExidyMemoryRom';
 import ExidyCharacters from './ExidyCharacters';
@@ -62,7 +62,7 @@ export default class MemorySystem {
             this.exidyScreen.charUpdated(char, row);
         });
         this.multiplexor.setHandler(SCREEN_START, SCREEN_SIZE_BYTES, this.exidyScreen);
-        this.multiplexor.setHandler(CHARS_START, CHARS_SIZE_BYTES, this.exidyCharacters);
+        this.multiplexor.setHandler(0xFC00, 0x0400, this.exidyCharacters);
     }
     get screenCanvas() {
         return this.exidyScreen.canvas;

@@ -8,8 +8,6 @@ import {CHARS_START} from './ExidyMemory';
 // 0xFC00 - 0xFDFF - Standard graphics
 // 0xFE00 - 0xFFFF - User defined graphics
 //
-// TODO Split into RAM/ROM segments
-//
 export default class ExidyCharacters extends Ram {
 
     private charsCanvas: HTMLCanvasElement;
@@ -43,7 +41,7 @@ export default class ExidyCharacters extends Ram {
     }
 
     writeByte(address: number, data: number): void {
-        if (address >= 0xFC00 && (data !== this.readByte(address))) {
+        if (data !== this.readByte(address)) {
             super.writeByte(address, data);
             const offset = address - CHARS_START;
             const row = offset & 0x7;

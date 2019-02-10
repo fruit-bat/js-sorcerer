@@ -21,7 +21,7 @@ export default class ExidyCharacters extends Ram {
         }
     }
     writeByte(address, data) {
-        if (address >= 0xFC00 && (data !== this.readByte(address))) {
+        if (data !== this.readByte(address)) {
             super.writeByte(address, data);
             const offset = address - CHARS_START;
             const row = offset & 0x7;

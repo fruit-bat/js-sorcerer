@@ -93,7 +93,7 @@ export default class MemorySystem {
         });
 
         this.multiplexor.setHandler(SCREEN_START, SCREEN_SIZE_BYTES, this.exidyScreen);
-        this.multiplexor.setHandler(CHARS_START, CHARS_SIZE_BYTES, this.exidyCharacters);
+        this.multiplexor.setHandler(0xFC00, 0x0400, this.exidyCharacters);
     }
 
     public get screenCanvas(): HTMLCanvasElement {

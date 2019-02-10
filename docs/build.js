@@ -470,7 +470,7 @@ define("ExidyCharacters", ["require", "exports", "ExidyMemoryRam", "ExidyMemory"
             }
         }
         writeByte(address, data) {
-            if (address >= 0xFC00 && (data !== this.readByte(address))) {
+            if (data !== this.readByte(address)) {
                 super.writeByte(address, data);
                 const offset = address - ExidyMemory_1.CHARS_START;
                 const row = offset & 0x7;
@@ -847,7 +847,7 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryRegion", "ExidyMe
                 this.exidyScreen.charUpdated(char, row);
             });
             this.multiplexor.setHandler(ExidyMemory_3.SCREEN_START, ExidyMemory_3.SCREEN_SIZE_BYTES, this.exidyScreen);
-            this.multiplexor.setHandler(ExidyMemory_3.CHARS_START, ExidyMemory_3.CHARS_SIZE_BYTES, this.exidyCharacters);
+            this.multiplexor.setHandler(0xFC00, 0x0400, this.exidyCharacters);
         }
         get screenCanvas() {
             return this.exidyScreen.canvas;
