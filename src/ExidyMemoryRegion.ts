@@ -38,6 +38,6 @@ export default class ExidyMemoryRegion {
     get text(): string {
       return this.hex(this._start, 4) + ' - ' +
         this.hex(this._start + this._length - 1, 4) + ' ' +
-        this._memoryType;
+        this._memoryType.description;
     }
 }

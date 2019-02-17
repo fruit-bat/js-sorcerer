@@ -2,6 +2,7 @@
 
 import MemoryTyped from './ExidyMemoryTyped';
 import MemoryType from './ExidyMemoryType';
+import MemoryTypes from './ExidyMemoryTypes';
 
 export default class NoMemory implements MemoryTyped {
 
@@ -16,6 +17,6 @@ export default class NoMemory implements MemoryTyped {
     }
 
     memoryType(): MemoryType {
-      return MemoryType.None;
+      return MemoryTypes.None;
     }
 }

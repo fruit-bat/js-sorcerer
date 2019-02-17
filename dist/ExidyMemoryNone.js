@@ -1,5 +1,5 @@
 'use strict';
-import MemoryType from './ExidyMemoryType';
+import MemoryTypes from './ExidyMemoryTypes';
 export default class NoMemory {
     constructor() {
     }
@@ -9,6 +9,6 @@ export default class NoMemory {
     writeByte(address, data) {
     }
     memoryType() {
-        return MemoryType.None;
+        return MemoryTypes.None;
     }
 }

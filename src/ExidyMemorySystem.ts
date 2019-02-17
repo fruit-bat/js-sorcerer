@@ -3,6 +3,7 @@
 import Memory from './ExidyMemory';
 import MemoryTyped from './ExidyMemoryTyped';
 import MemoryType from './ExidyMemoryType';
+import MemoryTypes from './ExidyMemoryTypes';
 import MemoryRegion from './ExidyMemoryRegion';
 import NoMemory from './ExidyMemoryNone';
 import {MEMORY_SIZE_IN_BYTES, CHARS_START, CHARS_SIZE_BYTES, SCREEN_START, SCREEN_SIZE_BYTES} from './ExidyMemory';
@@ -10,6 +11,7 @@ import Ram from './ExidyMemoryRam';
 import Rom from './ExidyMemoryRom';
 import ExidyCharacters from './ExidyCharacters';
 import ExidyScreen from './ExidyScreen';
+import DiskSystem from './ExidyDiskSystem';
 
 class Multiplexor implements Memory {
 
@@ -34,7 +36,7 @@ class Multiplexor implements Memory {
         return ((address >>> this._ignoreBits) << this._ignoreBits) === address;
     }
 
-    public setHandler(address: number, length: number, handler: MemoryTyped): void {
+    private fill(address: number, length: number, handler: MemoryTyped): void {
         if (!this.checkGranularity(address) || !this.checkGranularity(length)) {
           console.log('WARNING: handler granularity missmatch');
           console.log(address.toString(16) + " " + length.toString(16));
@@ -45,15 +47,29 @@ class Multiplexor implements Memory {
           (address + length) >> this._ignoreBits);
     }
 
+    public clearHandler(memoryType: MemoryType): void {
+        const address = memoryType.start;
+        const length = memoryType.length;
+        this.fill(address, length, new NoMemory());
+    }
+
+    public setHandler(handler: MemoryTyped): void {
+        const address = handler.memoryType().start;
+        const length = handler.memoryType().length;
+        this.fill(address, length, handler);
+    }
+
     public getRegions(): Array<MemoryRegion> {
         const regions: Array<MemoryRegion> = [];
         let start: number = null;
         let memoryType: MemoryType = null;
         for (let i = 0; i < this.handlers.length + 1; ++i) {
             const nextMemoryType = i < this.handlers.length ? this.handlers[i].memoryType() : null;
+            const typeCode = memoryType ? memoryType.code : null;
+            const nextTypeCode = nextMemoryType ? nextMemoryType.code : null;
             const address: number = i << this._ignoreBits;
-            if (nextMemoryType != memoryType) {
-                if (memoryType !== null) {
+            if (nextTypeCode != typeCode) {
+                if (typeCode !== null) {
                     regions.push(new MemoryRegion(memoryType, start, address - start));
                 }
                 start = address;
@@ -68,9 +84,6 @@ export default class MemorySystem {
 
     private _memory = new Uint8Array(MEMORY_SIZE_IN_BYTES);
 
-    private ram = new Ram(this._memory);
-    private rom = new Rom(this._memory);
-
     private multiplexor = new Multiplexor();
 
     private exidyCharacters: ExidyCharacters;
@@ -78,42 +91,74 @@ export default class MemorySystem {
 
     public constructor() {
 
-        this.multiplexor.setHandler(0, MEMORY_SIZE_IN_BYTES, this.ram);
-
-        this.multiplexor.setHandler(0xF800, 0xFE00 - 0xF800, this.rom);
+        this.multiplexor.setHandler(new NoMemory());
+        this.multiplexor.setHandler(new Ram(this._memory, MemoryTypes.Ram));
 
         const charsCanvas = <HTMLCanvasElement>document.createElement('canvas');
 
         charsCanvas.width = 2048;
         charsCanvas.height = 8;
 
+        this.multiplexor.setHandler(new Ram(this._memory, MemoryTypes.VideoScratchRam));
         this.exidyScreen = new ExidyScreen(this._memory, charsCanvas);
         this.exidyCharacters = new ExidyCharacters(this._memory, charsCanvas, (char, row) => {
             this.exidyScreen.charUpdated(char, row);
         });
 
-        this.multiplexor.setHandler(SCREEN_START, SCREEN_SIZE_BYTES, this.exidyScreen);
-        this.multiplexor.setHandler(0xFC00, 0x0400, this.exidyCharacters);
+        this.multiplexor.setHandler(this.exidyScreen);
+        this.multiplexor.setHandler(this.exidyCharacters);
     }
 
     public get screenCanvas(): HTMLCanvasElement {
         return this.exidyScreen.canvas;
     }
 
+    private loadRom(data: Uint8Array, memoryType: MemoryType): void {
+        const start = memoryType.start;
+        const length = memoryType.length;
+        if (data.length !== length) {
+            throw new Error('ROM length mismatch');
+        }
+        this._memory.set(data, start);
+        this.multiplexor.setHandler(new Rom(this._memory, memoryType));
+    }
+
+    public loadMonitorRom(data: Uint8Array): void {
+        this.loadRom(data, MemoryTypes.MonitorRom);
+    }
+
+    public loadDiskSystemRom(data: Uint8Array): void {
+        this.loadRom(data, MemoryTypes.DiskSystemRom);
+    }
+
+    public loadDiskSystem(diskSystem: DiskSystem): void {
+        this.multiplexor.setHandler(diskSystem);
+    }
+
+    public loadAsciiCharacterRom(data: Uint8Array): void {
+        this.loadRom(data, MemoryTypes.AsciiCharacterRom);
+    }
+
+    public loadRomPack8K(data: Uint8Array): void {
+        this.loadRom(data, MemoryTypes.RomPack8K);
+    }
+
+    public ejectRomPack8K(): void {
+        this.multiplexor.clearHandler(MemoryTypes.RomPack8K);
+        this._memory.fill(
+          0,
+          MemoryTypes.RomPack8K.start,
+          MemoryTypes.RomPack8K.start + MemoryTypes.RomPack8K.length);
+    }
+
+
+
+    // Deprecated
     public load(data: Uint8Array, address: number, start: number = 0): void {
         this._memory.set(data.subarray(start), address);
     }
 
-    public loadRom(data: Uint8Array, address: number): void {
-        this._memory.set(data, address);
-        this.multiplexor.setHandler(address, data.length, this.rom);
-    }
-
-    public ejectRom(address: number, length: number): void {
-        this.multiplexor.setHandler(address, length, this.ram);
-        this._memory.fill(0, address, address + length);
-    }
-
+    // Deprecated
     public get memory(): Memory {
         return this.multiplexor;
     }
@@ -124,10 +169,6 @@ export default class MemorySystem {
 
     public updateScreen(): void {
         this.exidyScreen.updateAll();
-    }
-
-    public setHandler(address: number, length: number, handler: MemoryTyped): void {
-        this.multiplexor.setHandler(address, length, handler);
     }
 
     public getMem(start, length): Uint8Array {

@@ -2,6 +2,7 @@
 
 import Ram from './ExidyMemoryRam';
 import {CHARS_START} from './ExidyMemory';
+import MemoryTypes from './ExidyMemoryTypes';
 
 //
 // 0xF800 - 0xFBFF - ASCII ROM character set
@@ -21,7 +22,7 @@ export default class ExidyCharacters extends Ram {
         charsCanvas: HTMLCanvasElement,
         charUpdated: (char: number, row: number) => void) {
 
-        super(memory);
+        super(memory, MemoryTypes.UserCharacterRam);
         this.charsCanvas = charsCanvas;
         this.byteCanvas = <HTMLCanvasElement>document.createElement('canvas');
         this.byteCanvas.width = 8;

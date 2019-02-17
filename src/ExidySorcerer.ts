@@ -15,13 +15,6 @@ import Centronics from './ExidyCentronics';
 import CentronicsSystem from './ExidyCentronicsSystem';
 import MemoryRegion from './ExidyMemoryRegion';
 
-const defaultRoms = [
-    { name: 'exmo1-1.dat', address: 0xE000 },
-    { name: 'exmo1-2.dat', address: 0xE800 },
-    { name: 'exchr-1.dat', address: 0xF800 },
-    { name: 'diskboot.dat', address: 0xBC00 }
-];
-
 const CYCLES_PER_DISK_TICK = 100000;
 
 export default class ExidySorcerer {
@@ -38,6 +31,22 @@ export default class ExidySorcerer {
     private _keyboard = new Keyboard();
     private _govern: Boolean = true;
     private _running: Boolean = false;
+
+    private readRom(name: string): Promise<Uint8Array> {
+        return this.filesystem.read('roms/' + name);
+    }
+
+    private readMonitorRom() : Promise<Uint8Array> {
+      return Promise.all([this.readRom('exmo1-1.dat'), this.readRom('exmo1-2.dat')])
+          .then(p => {
+              const p1 = p[0];
+              const p2 = p[1];
+              const b = new Uint8Array(p1.length + p2.length);
+              b.set(p1, 0);
+              b.set(p2, p1.length);
+              return b;
+          });
+    }
 
     public constructor(
         filesystem: ExidyFile) {
@@ -56,11 +65,17 @@ export default class ExidySorcerer {
 
         this.cpu = new Z80(this.memorySystem.memory, this.io.input, this.io.output);
 
-        this.ready = Promise.all(defaultRoms.map((romConfig) => {
-            return filesystem.read('roms/' + romConfig.name).then((data) => {
-                this.memorySystem.loadRom(data, romConfig.address);
-            });
-        })).then(() => {
+        this.ready = Promise.all([
+            this.readMonitorRom().then(data => {
+                this.memorySystem.loadMonitorRom(data);
+            }),
+            this.readRom('exchr-1.dat').then(data => {
+                this.memorySystem.loadAsciiCharacterRom(data);
+            }),
+            this.readRom('diskboot.dat').then(data => {
+                this.memorySystem.loadDiskSystemRom(data);
+            })
+        ]).then(() => {
             this.diskSystem = new ExidyDiskSystem(this.memorySystem);
         }).then(() => {
             this.memorySystem.updateCharacters();
@@ -82,11 +97,11 @@ export default class ExidySorcerer {
     }
 
     public ejectRom(): void {
-      this.memorySystem.ejectRom(0xc000, 0x2000);
+      this.memorySystem.ejectRomPack8K();
     }
 
     public loadRomFromArray(data: Uint8Array): void {
-        this.memorySystem.loadRom(data, 0xC000);
+        this.memorySystem.loadRomPack8K(data);
     }
 
     private loadSnpFromArray(data: Uint8Array): void {

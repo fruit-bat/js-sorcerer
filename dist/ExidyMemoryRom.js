@@ -1,15 +1,15 @@
 'use strict';
-import MemoryType from './ExidyMemoryType';
 export default class Rom {
-    constructor(memory) {
-        this.memory = memory;
+    constructor(memory, memoryType) {
+        this._memory = memory;
+        this._memoryType = memoryType;
     }
     readByte(address) {
-        return this.memory[address];
+        return this._memory[address];
     }
     writeByte(address, data) {
     }
     memoryType() {
-        return MemoryType.Rom;
+        return this._memoryType;
     }
 }

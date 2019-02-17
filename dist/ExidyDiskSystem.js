@@ -1,6 +1,6 @@
 'use strict';
 import ExidyDiskDrive from './ExidyDiskDrive';
-import MemoryType from './ExidyMemoryType';
+import MemoryTypes from './ExidyMemoryTypes';
 const MEM_DISK_REG_START = 0xBE00;
 const MEM_DISK_REG_LEN = 128;
 export default class ExidyDiskSystem {
@@ -11,7 +11,7 @@ export default class ExidyDiskSystem {
         for (let i = 0; i < this._drives.length; ++i) {
             this._drives[i] = new ExidyDiskDrive(i);
         }
-        memorySystem.setHandler(MEM_DISK_REG_START, MEM_DISK_REG_LEN, this);
+        memorySystem.loadDiskSystem(this);
     }
     getDiskDrive(drive) {
         return this._drives[drive];
@@ -154,6 +154,6 @@ export default class ExidyDiskSystem {
         }
     }
     memoryType() {
-        return MemoryType.None;
+        return MemoryTypes.DiskSystemInterface;
     }
 }

@@ -5,20 +5,22 @@ import MemoryType from './ExidyMemoryType';
 
 export default class Rom implements MemoryTyped {
 
-    private memory: Uint8Array;
+    private _memory: Uint8Array;
+    private _memoryType: MemoryType;
 
-    public constructor(memory: Uint8Array) {
-        this.memory = memory;
+    public constructor(memory: Uint8Array, memoryType: MemoryType) {
+        this._memory = memory;
+        this._memoryType = memoryType;
     }
 
     readByte(address: number): number {
-        return this.memory[address];
+        return this._memory[address];
     }
 
     writeByte(address: number, data: number): void {
     }
 
     memoryType(): MemoryType {
-      return MemoryType.Rom;
+      return this._memoryType;
     }
 }

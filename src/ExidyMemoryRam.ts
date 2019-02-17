@@ -6,21 +6,23 @@ import MemoryType from './ExidyMemoryType';
 
 export default class Ram implements MemoryTyped {
 
-    private memory: Uint8Array;
+    private _memory: Uint8Array;
+    private _memoryType: MemoryType;
 
-    public constructor(memory: Uint8Array) {
-        this.memory = memory;
+    public constructor(memory: Uint8Array, memoryType: MemoryType) {
+        this._memory = memory;
+        this._memoryType = memoryType;
     }
 
     readByte(address: number): number {
-        return this.memory[address];
+        return this._memory[address];
     }
 
     writeByte(address: number, data: number): void {
-        this.memory[address] = data;
+        this._memory[address] = data;
     }
 
     memoryType(): MemoryType {
-      return MemoryType.Ram;
+      return this._memoryType;
     }
 }

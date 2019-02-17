@@ -1,16 +1,16 @@
 'use strict';
-import MemoryType from './ExidyMemoryType';
 export default class Ram {
-    constructor(memory) {
-        this.memory = memory;
+    constructor(memory, memoryType) {
+        this._memory = memory;
+        this._memoryType = memoryType;
     }
     readByte(address) {
-        return this.memory[address];
+        return this._memory[address];
     }
     writeByte(address, data) {
-        this.memory[address] = data;
+        this._memory[address] = data;
     }
     memoryType() {
-        return MemoryType.Ram;
+        return this._memoryType;
     }
 }
