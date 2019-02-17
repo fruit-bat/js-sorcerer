@@ -380,6 +380,53 @@ define("ExidyBrowserKeyboard", ["require", "exports"], function (require, export
     }
     exports.default = BrowserKeyboard;
 });
+define("ExidyBytes", ["require", "exports"], function (require, exports) {
+    'use strict';
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class ExidyBytes {
+        static set2lm(data, address, value) {
+            data[address] = value & 0xff;
+            data[address + 1] = (value >>> 8) & 0xff;
+        }
+        static set2ml(data, address, value) {
+            data[address + 1] = value & 0xff;
+            data[address] = (value >>> 8) & 0xff;
+        }
+        static set4lm(data, address, value) {
+            data[address] = value & 0xff;
+            data[address + 1] = (value >>> 8) & 0xff;
+            data[address + 2] = (value >>> 16) & 0xff;
+            data[address + 3] = (value >>> 24) & 0xff;
+        }
+        static set4ml(data, address, value) {
+            data[address + 3] = value & 0xff;
+            data[address + 2] = (value >>> 8) & 0xff;
+            data[address + 1] = (value >>> 16) & 0xff;
+            data[address] = (value >>> 24) & 0xff;
+        }
+        static get2lm(data, address) {
+            return data[address] +
+                (data[address + 1] << 8);
+        }
+        static get2ml(data, address) {
+            return data[address + 1] +
+                (data[address] << 8);
+        }
+        static get4lm(data, address) {
+            return data[address] +
+                (data[address + 1] << 8) +
+                (data[address + 2] << 16) +
+                (data[address + 3] << 24);
+        }
+        static get4ml(data, address) {
+            return data[address + 3] +
+                (data[address + 2] << 8) +
+                (data[address + 1] << 16) +
+                (data[address] << 24);
+        }
+    }
+    exports.default = ExidyBytes;
+});
 define("ExidyCentronics", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -465,6 +512,25 @@ define("ExidyMemoryTypes", ["require", "exports", "ExidyMemoryType"], function (
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class ExidyMemoryTypes {
+        static getMap() {
+            if (ExidyMemoryTypes._map === null) {
+                ExidyMemoryTypes._map = new Map();
+                ExidyMemoryTypes._map[ExidyMemoryTypes.None.code] = ExidyMemoryTypes.None;
+                ExidyMemoryTypes._map[ExidyMemoryTypes.Ram.code] = ExidyMemoryTypes.Ram;
+                ExidyMemoryTypes._map[ExidyMemoryTypes.DiskSystemRom.code] = ExidyMemoryTypes.DiskSystemRom;
+                ExidyMemoryTypes._map[ExidyMemoryTypes.DiskSystemInterface.code] = ExidyMemoryTypes.DiskSystemInterface;
+                ExidyMemoryTypes._map[ExidyMemoryTypes.RomPack8K.code] = ExidyMemoryTypes.RomPack8K;
+                ExidyMemoryTypes._map[ExidyMemoryTypes.MonitorRom.code] = ExidyMemoryTypes.MonitorRom;
+                ExidyMemoryTypes._map[ExidyMemoryTypes.VideoScratchRam.code] = ExidyMemoryTypes.VideoScratchRam;
+                ExidyMemoryTypes._map[ExidyMemoryTypes.ScreenRam.code] = ExidyMemoryTypes.ScreenRam;
+                ExidyMemoryTypes._map[ExidyMemoryTypes.AsciiCharacterRom.code] = ExidyMemoryTypes.AsciiCharacterRom;
+                ExidyMemoryTypes._map[ExidyMemoryTypes.UserCharacterRam.code] = ExidyMemoryTypes.UserCharacterRam;
+            }
+            return ExidyMemoryTypes._map;
+        }
+        static getType(code) {
+            return ExidyMemoryTypes.getMap()[code];
+        }
     }
     ExidyMemoryTypes.UserCharacterRam = new ExidyMemoryType_1.default(9, 'User defined character RAM', 0xFC00, 0xFFFF);
     ExidyMemoryTypes.AsciiCharacterRom = new ExidyMemoryType_1.default(8, 'ASCII character ROM', 0xF800, 0xFBFF);
@@ -476,6 +542,7 @@ define("ExidyMemoryTypes", ["require", "exports", "ExidyMemoryType"], function (
     ExidyMemoryTypes.DiskSystemRom = new ExidyMemoryType_1.default(2, 'Disk system ROM', 0xBC00, 0xBCFF);
     ExidyMemoryTypes.Ram = new ExidyMemoryType_1.default(1, 'RAM', 0x0000, 0xBFFF);
     ExidyMemoryTypes.None = new ExidyMemoryType_1.default(0, 'None', 0x0000, 0xFFFF);
+    ExidyMemoryTypes._map = null;
     exports.default = ExidyMemoryTypes;
 });
 define("ExidyCharacters", ["require", "exports", "ExidyMemoryRam", "ExidyMemory", "ExidyMemoryTypes"], function (require, exports, ExidyMemoryRam_1, ExidyMemory_1, ExidyMemoryTypes_1) {
@@ -706,7 +773,7 @@ define("ExidyDiskDrive", ["require", "exports", "ExidyDiskConsts", "ExidyMonosta
     }
     exports.default = ExidyDiskDrive;
 });
-define("ExidyMemoryRegion", ["require", "exports"], function (require, exports) {
+define("ExidyMemoryRegion", ["require", "exports", "ExidyMemoryTypes", "ExidyBytes"], function (require, exports, ExidyMemoryTypes_2, ExidyBytes_1) {
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class ExidyMemoryRegion {
@@ -733,10 +800,26 @@ define("ExidyMemoryRegion", ["require", "exports"], function (require, exports) 
                 this.hex(this._start + this._length - 1, 4) + ' ' +
                 this._memoryType.description;
         }
+        static getSnp2Size() {
+            return 5;
+        }
+        saveSnp2(data, address) {
+            data[address] = this._memoryType.code;
+            ExidyBytes_1.default.set2ml(data, address + 1, this._start);
+            ExidyBytes_1.default.set2ml(data, address + 3, this._length);
+            return ExidyMemoryRegion.getSnp2Size();
+        }
+        static loadSnp2(data, address) {
+            const memoryTypeCode = data[address];
+            const memoryType = ExidyMemoryTypes_2.default.getType(memoryTypeCode);
+            const start = ExidyBytes_1.default.get2ml(data, address + 1);
+            const length = ExidyBytes_1.default.get2ml(data, address + 3);
+            return new ExidyMemoryRegion(memoryType, start, length);
+        }
     }
     exports.default = ExidyMemoryRegion;
 });
-define("ExidyMemoryNone", ["require", "exports", "ExidyMemoryTypes"], function (require, exports, ExidyMemoryTypes_2) {
+define("ExidyMemoryNone", ["require", "exports", "ExidyMemoryTypes"], function (require, exports, ExidyMemoryTypes_3) {
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class NoMemory {
@@ -748,7 +831,7 @@ define("ExidyMemoryNone", ["require", "exports", "ExidyMemoryTypes"], function (
         writeByte(address, data) {
         }
         memoryType() {
-            return ExidyMemoryTypes_2.default.None;
+            return ExidyMemoryTypes_3.default.None;
         }
     }
     exports.default = NoMemory;
@@ -772,12 +855,12 @@ define("ExidyMemoryRom", ["require", "exports"], function (require, exports) {
     }
     exports.default = Rom;
 });
-define("ExidyScreen", ["require", "exports", "ExidyMemoryRam", "ExidyMemory", "ExidyMemoryTypes"], function (require, exports, ExidyMemoryRam_2, ExidyMemory_2, ExidyMemoryTypes_3) {
+define("ExidyScreen", ["require", "exports", "ExidyMemoryRam", "ExidyMemory", "ExidyMemoryTypes"], function (require, exports, ExidyMemoryRam_2, ExidyMemory_2, ExidyMemoryTypes_4) {
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class ExidyScreen extends ExidyMemoryRam_2.default {
         constructor(memory, charsCanvas) {
-            super(memory, ExidyMemoryTypes_3.default.ScreenRam);
+            super(memory, ExidyMemoryTypes_4.default.ScreenRam);
             this.screenCanvas = document.createElement('canvas');
             this.screenCanvas.width = 512;
             this.screenCanvas.height = 240;
@@ -820,7 +903,7 @@ define("ExidyScreen", ["require", "exports", "ExidyMemoryRam", "ExidyMemory", "E
     }
     exports.default = ExidyScreen;
 });
-define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryTypes", "ExidyMemoryRegion", "ExidyMemoryNone", "ExidyMemory", "ExidyMemoryRam", "ExidyMemoryRom", "ExidyCharacters", "ExidyScreen"], function (require, exports, ExidyMemoryTypes_4, ExidyMemoryRegion_1, ExidyMemoryNone_1, ExidyMemory_3, ExidyMemoryRam_3, ExidyMemoryRom_1, ExidyCharacters_1, ExidyScreen_1) {
+define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryTypes", "ExidyMemoryRegion", "ExidyMemoryNone", "ExidyMemory", "ExidyMemoryRam", "ExidyMemoryRom", "ExidyCharacters", "ExidyScreen"], function (require, exports, ExidyMemoryTypes_5, ExidyMemoryRegion_1, ExidyMemoryNone_1, ExidyMemory_3, ExidyMemoryRam_3, ExidyMemoryRom_1, ExidyCharacters_1, ExidyScreen_1) {
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     class Multiplexor {
@@ -850,10 +933,8 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryTypes", "ExidyMem
             const length = memoryType.length;
             this.fill(address, length, new ExidyMemoryNone_1.default());
         }
-        setHandler(handler) {
-            const address = handler.memoryType().start;
-            const length = handler.memoryType().length;
-            this.fill(address, length, handler);
+        setHandler(handler, address, length) {
+            this.fill(address == undefined ? handler.memoryType().start : address, length == undefined ? handler.memoryType().length : length, handler);
         }
         getRegions() {
             const regions = [];
@@ -879,18 +960,41 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryTypes", "ExidyMem
         constructor() {
             this._memory = new Uint8Array(ExidyMemory_3.MEMORY_SIZE_IN_BYTES);
             this.multiplexor = new Multiplexor();
-            this.multiplexor.setHandler(new ExidyMemoryNone_1.default());
-            this.multiplexor.setHandler(new ExidyMemoryRam_3.default(this._memory, ExidyMemoryTypes_4.default.Ram));
+            this._handlerMap = new Map();
             const charsCanvas = document.createElement('canvas');
             charsCanvas.width = 2048;
             charsCanvas.height = 8;
-            this.multiplexor.setHandler(new ExidyMemoryRam_3.default(this._memory, ExidyMemoryTypes_4.default.VideoScratchRam));
             this.exidyScreen = new ExidyScreen_1.default(this._memory, charsCanvas);
             this.exidyCharacters = new ExidyCharacters_1.default(this._memory, charsCanvas, (char, row) => {
                 this.exidyScreen.charUpdated(char, row);
             });
-            this.multiplexor.setHandler(this.exidyScreen);
-            this.multiplexor.setHandler(this.exidyCharacters);
+            this._handlerMap[ExidyMemoryTypes_5.default.None.code] = new ExidyMemoryNone_1.default();
+            this._handlerMap[ExidyMemoryTypes_5.default.Ram.code] = new ExidyMemoryRam_3.default(this._memory, ExidyMemoryTypes_5.default.Ram);
+            this._handlerMap[ExidyMemoryTypes_5.default.DiskSystemRom.code] = new ExidyMemoryRom_1.default(this._memory, ExidyMemoryTypes_5.default.DiskSystemRom);
+            this._handlerMap[ExidyMemoryTypes_5.default.RomPack8K.code] = new ExidyMemoryRom_1.default(this._memory, ExidyMemoryTypes_5.default.RomPack8K);
+            this._handlerMap[ExidyMemoryTypes_5.default.MonitorRom.code] = new ExidyMemoryRom_1.default(this._memory, ExidyMemoryTypes_5.default.MonitorRom);
+            this._handlerMap[ExidyMemoryTypes_5.default.VideoScratchRam.code] = new ExidyMemoryRam_3.default(this._memory, ExidyMemoryTypes_5.default.VideoScratchRam);
+            this._handlerMap[ExidyMemoryTypes_5.default.ScreenRam.code] = this.exidyScreen;
+            this._handlerMap[ExidyMemoryTypes_5.default.AsciiCharacterRom.code] = new ExidyMemoryRom_1.default(this._memory, ExidyMemoryTypes_5.default.AsciiCharacterRom);
+            this._handlerMap[ExidyMemoryTypes_5.default.UserCharacterRam.code] = this.exidyCharacters;
+            this.loadDefaults();
+        }
+        loadDefaults() {
+            this.multiplexor.setHandler(this._handlerMap[ExidyMemoryTypes_5.default.None.code]);
+            this.multiplexor.setHandler(this._handlerMap[ExidyMemoryTypes_5.default.Ram.code]);
+            this.multiplexor.setHandler(this._handlerMap[ExidyMemoryTypes_5.default.VideoScratchRam.code]);
+            this.multiplexor.setHandler(this._handlerMap[ExidyMemoryTypes_5.default.ScreenRam.code]);
+            this.multiplexor.setHandler(this._handlerMap[ExidyMemoryTypes_5.default.UserCharacterRam.code]);
+        }
+        loadRegion(region) {
+            const handler = this._handlerMap[region.memoryType.code];
+            if (handler == undefined) {
+                throw new Error('Missing memory handler for type ' + region.memoryType.code);
+            }
+            this.multiplexor.setHandler(handler, region.start, region.length);
+        }
+        loadRegions(regions) {
+            regions.forEach(region => { this.loadRegion(region); });
         }
         get screenCanvas() {
             return this.exidyScreen.canvas;
@@ -905,23 +1009,54 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryTypes", "ExidyMem
             this.multiplexor.setHandler(new ExidyMemoryRom_1.default(this._memory, memoryType));
         }
         loadMonitorRom(data) {
-            this.loadRom(data, ExidyMemoryTypes_4.default.MonitorRom);
+            this.loadRom(data, ExidyMemoryTypes_5.default.MonitorRom);
         }
         loadDiskSystemRom(data) {
-            this.loadRom(data, ExidyMemoryTypes_4.default.DiskSystemRom);
+            this.loadRom(data, ExidyMemoryTypes_5.default.DiskSystemRom);
         }
         loadDiskSystem(diskSystem) {
             this.multiplexor.setHandler(diskSystem);
         }
         loadAsciiCharacterRom(data) {
-            this.loadRom(data, ExidyMemoryTypes_4.default.AsciiCharacterRom);
+            this.loadRom(data, ExidyMemoryTypes_5.default.AsciiCharacterRom);
         }
         loadRomPack8K(data) {
-            this.loadRom(data, ExidyMemoryTypes_4.default.RomPack8K);
+            this.loadRom(data, ExidyMemoryTypes_5.default.RomPack8K);
         }
         ejectRomPack8K() {
-            this.multiplexor.clearHandler(ExidyMemoryTypes_4.default.RomPack8K);
-            this._memory.fill(0, ExidyMemoryTypes_4.default.RomPack8K.start, ExidyMemoryTypes_4.default.RomPack8K.start + ExidyMemoryTypes_4.default.RomPack8K.length);
+            this.multiplexor.clearHandler(ExidyMemoryTypes_5.default.RomPack8K);
+            this._memory.fill(0, ExidyMemoryTypes_5.default.RomPack8K.start, ExidyMemoryTypes_5.default.RomPack8K.start + ExidyMemoryTypes_5.default.RomPack8K.length);
+        }
+        getSnp2RegionsSize() {
+            return 1 +
+                ExidyMemoryRegion_1.default.getSnp2Size() * this.getRegions().length;
+        }
+        saveSnp2Regions(data, address) {
+            const regions = this.getRegions();
+            data[address++] = regions.length;
+            for (let i = 0; i < regions.length; ++i) {
+                address += regions[i].saveSnp2(data, address);
+            }
+        }
+        loadSnp2Regions(data, address) {
+            const numberOfRegions = data[address++];
+            for (let i = 0; i < numberOfRegions; ++i) {
+                const region = ExidyMemoryRegion_1.default.loadSnp2(data, address);
+                this.loadRegion(region);
+                address += ExidyMemoryRegion_1.default.getSnp2Size();
+            }
+        }
+        getSnp2Size() {
+            return this._memory.length + this.getSnp2RegionsSize();
+        }
+        saveSnp2(data, address) {
+            data.set(this._memory, address);
+            this.saveSnp2Regions(data, address + this._memory.length);
+        }
+        loadSnp2(data, address) {
+            const regionsAddress = address + ExidyMemory_3.MEMORY_SIZE_IN_BYTES;
+            this._memory.set(data.subarray(address, regionsAddress));
+            this.loadSnp2Regions(data, regionsAddress);
         }
         load(data, address, start = 0) {
             this._memory.set(data.subarray(start), address);
@@ -944,7 +1079,7 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryTypes", "ExidyMem
     }
     exports.default = MemorySystem;
 });
-define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive", "ExidyMemoryTypes"], function (require, exports, ExidyDiskDrive_1, ExidyMemoryTypes_5) {
+define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive", "ExidyMemoryTypes"], function (require, exports, ExidyDiskDrive_1, ExidyMemoryTypes_6) {
     'use strict';
     Object.defineProperty(exports, "__esModule", { value: true });
     const MEM_DISK_REG_START = 0xBE00;
@@ -1100,7 +1235,7 @@ define("ExidyDiskSystem", ["require", "exports", "ExidyDiskDrive", "ExidyMemoryT
             }
         }
         memoryType() {
-            return ExidyMemoryTypes_5.default.DiskSystemInterface;
+            return ExidyMemoryTypes_6.default.DiskSystemInterface;
         }
     }
     exports.default = ExidyDiskSystem;

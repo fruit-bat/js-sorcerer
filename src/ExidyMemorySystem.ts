@@ -6,7 +6,7 @@ import MemoryType from './ExidyMemoryType';
 import MemoryTypes from './ExidyMemoryTypes';
 import MemoryRegion from './ExidyMemoryRegion';
 import NoMemory from './ExidyMemoryNone';
-import {MEMORY_SIZE_IN_BYTES, CHARS_START, CHARS_SIZE_BYTES, SCREEN_START, SCREEN_SIZE_BYTES} from './ExidyMemory';
+import {MEMORY_SIZE_IN_BYTES} from './ExidyMemory';
 import Ram from './ExidyMemoryRam';
 import Rom from './ExidyMemoryRom';
 import ExidyCharacters from './ExidyCharacters';
@@ -53,10 +53,11 @@ class Multiplexor implements Memory {
         this.fill(address, length, new NoMemory());
     }
 
-    public setHandler(handler: MemoryTyped): void {
-        const address = handler.memoryType().start;
-        const length = handler.memoryType().length;
-        this.fill(address, length, handler);
+    public setHandler(handler: MemoryTyped, address?: number, length?: number): void {
+        this.fill(
+            address == undefined ? handler.memoryType().start : address,
+            length == undefined ? handler.memoryType().length : length,
+            handler);
     }
 
     public getRegions(): Array<MemoryRegion> {
@@ -89,24 +90,56 @@ export default class MemorySystem {
     private exidyCharacters: ExidyCharacters;
     private exidyScreen: ExidyScreen;
 
-    public constructor() {
+    private _handlerMap: Map<number, MemoryTyped> = new Map();
 
-        this.multiplexor.setHandler(new NoMemory());
-        this.multiplexor.setHandler(new Ram(this._memory, MemoryTypes.Ram));
+    // TODO Pass in disk system handler
+    public constructor() {
 
         const charsCanvas = <HTMLCanvasElement>document.createElement('canvas');
 
         charsCanvas.width = 2048;
         charsCanvas.height = 8;
 
-        this.multiplexor.setHandler(new Ram(this._memory, MemoryTypes.VideoScratchRam));
         this.exidyScreen = new ExidyScreen(this._memory, charsCanvas);
         this.exidyCharacters = new ExidyCharacters(this._memory, charsCanvas, (char, row) => {
             this.exidyScreen.charUpdated(char, row);
         });
 
-        this.multiplexor.setHandler(this.exidyScreen);
-        this.multiplexor.setHandler(this.exidyCharacters);
+        this._handlerMap[MemoryTypes.None.code] = new NoMemory();
+        this._handlerMap[MemoryTypes.Ram.code] = new Ram(this._memory, MemoryTypes.Ram);
+        this._handlerMap[MemoryTypes.DiskSystemRom.code] = new Rom(this._memory, MemoryTypes.DiskSystemRom);
+        // TODO this._handlerMap[MemoryTypes.DiskSystemInterface.code] = new NoMemory();
+        this._handlerMap[MemoryTypes.RomPack8K.code] = new Rom(this._memory, MemoryTypes.RomPack8K);
+        this._handlerMap[MemoryTypes.MonitorRom.code] = new Rom(this._memory, MemoryTypes.MonitorRom);
+        this._handlerMap[MemoryTypes.VideoScratchRam.code] = new Ram(this._memory, MemoryTypes.VideoScratchRam);
+        this._handlerMap[MemoryTypes.ScreenRam.code] = this.exidyScreen;
+        this._handlerMap[MemoryTypes.AsciiCharacterRom.code] = new Rom(this._memory, MemoryTypes.AsciiCharacterRom);
+        this._handlerMap[MemoryTypes.UserCharacterRam.code] = this.exidyCharacters;
+
+        this.loadDefaults();
+    }
+
+    public loadDefaults() {
+        this.multiplexor.setHandler(this._handlerMap[MemoryTypes.None.code]);
+        this.multiplexor.setHandler(this._handlerMap[MemoryTypes.Ram.code]);
+        this.multiplexor.setHandler(this._handlerMap[MemoryTypes.VideoScratchRam.code]);
+        this.multiplexor.setHandler(this._handlerMap[MemoryTypes.ScreenRam.code]);
+        this.multiplexor.setHandler(this._handlerMap[MemoryTypes.UserCharacterRam.code]);
+    }
+
+    public loadRegion(region: MemoryRegion): void {
+        const handler = this._handlerMap[region.memoryType.code];
+        if (handler == undefined) {
+            throw new Error('Missing memory handler for type ' + region.memoryType.code);
+        }
+        this.multiplexor.setHandler(
+            handler,
+            region.start,
+            region.length);
+    }
+
+    public loadRegions(regions: Array<MemoryRegion>): void {
+        regions.forEach(region => { this.loadRegion(region); });
     }
 
     public get screenCanvas(): HTMLCanvasElement {
@@ -151,7 +184,43 @@ export default class MemorySystem {
           MemoryTypes.RomPack8K.start + MemoryTypes.RomPack8K.length);
     }
 
+    private getSnp2RegionsSize(): number {
+        return 1 + // 1 byte for number of regions
+            MemoryRegion.getSnp2Size() * this.getRegions().length;
+    }
 
+    private saveSnp2Regions(data: Uint8Array, address: number): void {
+        const regions = this.getRegions();
+        // TODO Check we have less that 256 regions
+        data[address++] = regions.length;
+        for (let i = 0; i < regions.length; ++i) {
+            address += regions[i].saveSnp2(data, address);
+        }
+    }
+
+    private loadSnp2Regions(data: Uint8Array, address: number): void {
+        const numberOfRegions = data[address++];
+        for (let i = 0; i < numberOfRegions; ++i) {
+            const region = MemoryRegion.loadSnp2(data, address);
+            this.loadRegion(region);
+            address += MemoryRegion.getSnp2Size();
+        }
+    }
+
+    private getSnp2Size(): number {
+        return this._memory.length + this.getSnp2RegionsSize();
+    }
+
+    private saveSnp2(data: Uint8Array, address: number): void {
+        data.set(this._memory, address);
+        this.saveSnp2Regions(data, address + this._memory.length);
+    }
+
+    public loadSnp2(data: Uint8Array, address: number): void {
+        const regionsAddress = address + MEMORY_SIZE_IN_BYTES;
+        this._memory.set(data.subarray(address, regionsAddress));
+        this.loadSnp2Regions(data, regionsAddress);
+    }
 
     // Deprecated
     public load(data: Uint8Array, address: number, start: number = 0): void {
@@ -178,4 +247,5 @@ export default class MemorySystem {
     public getRegions(): Array<MemoryRegion> {
         return this.multiplexor.getRegions();
     }
+
 }

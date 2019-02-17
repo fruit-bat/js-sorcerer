@@ -23,4 +23,28 @@ export default class ExidyMemoryTypes {
     public static Ram = new MemoryType(1, 'RAM', 0x0000, 0xBFFF);
 
     public static None = new MemoryType(0, 'None', 0x0000, 0xFFFF);
+
+    private static _map: Map<number, MemoryType> = null;
+
+    private static getMap(): Map<number, MemoryType> {
+        if (ExidyMemoryTypes._map === null) {
+            ExidyMemoryTypes._map = new Map<number, MemoryType>();
+            ExidyMemoryTypes._map[ExidyMemoryTypes.None.code] = ExidyMemoryTypes.None;
+            ExidyMemoryTypes._map[ExidyMemoryTypes.Ram.code] = ExidyMemoryTypes.Ram;
+            ExidyMemoryTypes._map[ExidyMemoryTypes.DiskSystemRom.code] = ExidyMemoryTypes.DiskSystemRom;
+            ExidyMemoryTypes._map[ExidyMemoryTypes.DiskSystemInterface.code] = ExidyMemoryTypes.DiskSystemInterface;
+            ExidyMemoryTypes._map[ExidyMemoryTypes.RomPack8K.code] = ExidyMemoryTypes.RomPack8K;
+            ExidyMemoryTypes._map[ExidyMemoryTypes.MonitorRom.code] = ExidyMemoryTypes.MonitorRom;
+            ExidyMemoryTypes._map[ExidyMemoryTypes.VideoScratchRam.code] = ExidyMemoryTypes.VideoScratchRam;
+            ExidyMemoryTypes._map[ExidyMemoryTypes.ScreenRam.code] = ExidyMemoryTypes.ScreenRam;
+            ExidyMemoryTypes._map[ExidyMemoryTypes.AsciiCharacterRom.code] = ExidyMemoryTypes.AsciiCharacterRom;
+            ExidyMemoryTypes._map[ExidyMemoryTypes.UserCharacterRam.code] = ExidyMemoryTypes.UserCharacterRam;
+        }
+        return ExidyMemoryTypes._map;
+    }
+
+    public static getType(code: number): MemoryType {
+        // TODO check the code exists in the map
+        return ExidyMemoryTypes.getMap()[code];
+    }
 }
