@@ -1,10 +1,9 @@
 'use strict';
 import Ram from './ExidyMemoryRam';
 import { CHARS_START } from './ExidyMemory';
-import MemoryTypes from './ExidyMemoryTypes';
 export default class ExidyCharacters extends Ram {
     constructor(memory, charsCanvas, charUpdated) {
-        super(memory, MemoryTypes.UserCharacterRam);
+        super(memory);
         this.charsCanvas = charsCanvas;
         this.byteCanvas = document.createElement('canvas');
         this.byteCanvas.width = 8;

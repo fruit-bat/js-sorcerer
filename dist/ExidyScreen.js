@@ -1,10 +1,9 @@
 'use strict';
 import Ram from './ExidyMemoryRam';
 import { SCREEN_START, SCREEN_SIZE_BYTES } from './ExidyMemory';
-import MemoryTypes from './ExidyMemoryTypes';
 export default class ExidyScreen extends Ram {
     constructor(memory, charsCanvas) {
-        super(memory, MemoryTypes.ScreenRam);
+        super(memory);
         this.screenCanvas = document.createElement('canvas');
         this.screenCanvas.width = 512;
         this.screenCanvas.height = 240;
