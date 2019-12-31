@@ -1393,7 +1393,7 @@ define("ExidyIo", ["require", "exports"], function (require, exports) {
     }
     exports.IoSystem = IoSystem;
 });
-define("ExidyZ80", ["require", "exports"], function (require, exports) {
+define("ExidyZ80", ["require", "exports", "ExidyBytes"], function (require, exports, ExidyBytes_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function Z80(coreParameter) {
@@ -3610,9 +3610,19 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
         interrupt(non_maskable, value) {
             this.cpu.interrupt(non_maskable, value);
         }
+        decodeFlags(flags) {
+            return {
+                S: (flags & 0x80) >>> 7,
+                Z: (flags & 0x40) >>> 6,
+                Y: (flags & 0x20) >>> 5,
+                H: (flags & 0x10) >>> 4,
+                X: (flags & 0x08) >>> 3,
+                P: (flags & 0x04) >>> 2,
+                N: (flags & 0x02) >>> 1,
+                C: (flags & 0x01)
+            };
+        }
         load(data) {
-            const flags = data[20];
-            const flags_prime = 0x00;
             this.cpu.setState({
                 i: data[0],
                 l_prime: data[1],
@@ -3629,40 +3639,60 @@ define("ExidyZ80", ["require", "exports"], function (require, exports) {
                 d: data[12],
                 c: data[13],
                 b: data[14],
-                iy: data[15] | (data[16] << 8),
-                ix: data[17] | (data[18] << 8),
+                iy: ExidyBytes_2.default.get2lm(data, 15),
+                ix: ExidyBytes_2.default.get2lm(data, 17),
                 iff2: (data[19] & 0x04) !== 0 ? 1 : 0,
                 iff1: (data[19] & 0x02) !== 0 ? 1 : 0,
                 r: data[20],
                 f: data[21],
                 a: data[22],
-                sp: data[23] | (data[24] << 8),
+                sp: ExidyBytes_2.default.get2lm(data, 23),
                 imode: data[25],
-                pc: data[26] | (data[27] << 8),
-                flags: {
-                    S: (flags & 0x80) >>> 7,
-                    Z: (flags & 0x40) >>> 6,
-                    Y: (flags & 0x20) >>> 5,
-                    H: (flags & 0x10) >>> 4,
-                    X: (flags & 0x08) >>> 3,
-                    P: (flags & 0x04) >>> 2,
-                    N: (flags & 0x02) >>> 1,
-                    C: (flags & 0x01)
-                },
-                flags_prime: {
-                    S: (flags_prime & 0x80) >>> 7,
-                    Z: (flags_prime & 0x40) >>> 6,
-                    Y: (flags_prime & 0x20) >>> 5,
-                    H: (flags_prime & 0x10) >>> 4,
-                    X: (flags_prime & 0x08) >>> 3,
-                    P: (flags_prime & 0x04) >>> 2,
-                    N: (flags_prime & 0x02) >>> 1,
-                    C: (flags_prime & 0x01)
-                },
+                pc: ExidyBytes_2.default.get2lm(data, 26),
+                flags: this.decodeFlags(data[20]),
+                flags_prime: this.decodeFlags(0x00),
                 halted: false,
                 do_delayed_di: false,
                 do_delayed_ei: false,
                 cycle_counter: 0
+            });
+        }
+        static getSnp2Size() {
+            return 34;
+        }
+        loadSnp2(data) {
+            this.cpu.setState({
+                i: data[0],
+                l_prime: data[1],
+                h_prime: data[2],
+                e_prime: data[3],
+                d_prime: data[4],
+                c_prime: data[5],
+                b_prime: data[6],
+                f_prime: data[7],
+                a_prime: data[8],
+                l: data[9],
+                h: data[10],
+                e: data[11],
+                d: data[12],
+                c: data[13],
+                b: data[14],
+                iy: ExidyBytes_2.default.get2lm(data, 15),
+                ix: ExidyBytes_2.default.get2lm(data, 17),
+                iff2: (data[19] & 0x04) !== 0 ? 1 : 0,
+                iff1: (data[19] & 0x02) !== 0 ? 1 : 0,
+                r: data[20],
+                f: data[21],
+                a: data[22],
+                sp: ExidyBytes_2.default.get2lm(data, 23),
+                imode: data[25],
+                pc: ExidyBytes_2.default.get2lm(data, 26),
+                flags: this.decodeFlags(data[28]),
+                flags_prime: this.decodeFlags(data[29]),
+                halted: (data[19] & 0x01) !== 0,
+                do_delayed_di: (data[19] & 0x08) !== 0,
+                do_delayed_ei: (data[19] & 0x10) !== 0,
+                cycle_counter: ExidyBytes_2.default.get4lm(data, 30)
             });
         }
     }
