@@ -911,15 +911,18 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryTyped", "ExidyMem
     class Multiplexor {
         constructor(nomem) {
             this._ignoreBits = 7;
-            this.handlers = new Array(ExidyMemory_3.MEMORY_SIZE_IN_BYTES >> this._ignoreBits);
-            this.handlers.fill(nomem);
+            const size = ExidyMemory_3.MEMORY_SIZE_IN_BYTES >> this._ignoreBits;
+            this._typedHandlers = new Array(size);
+            this._handlers = new Array(size);
+            this._typedHandlers.fill(nomem);
+            this._handlers.fill(nomem.memory());
             this._nomem = nomem;
         }
         readByte(address) {
-            return this.handlers[address >>> this._ignoreBits].memory().readByte(address);
+            return this._handlers[address >>> this._ignoreBits].readByte(address);
         }
         writeByte(address, data) {
-            this.handlers[address >>> this._ignoreBits].memory().writeByte(address, data);
+            this._handlers[address >>> this._ignoreBits].writeByte(address, data);
         }
         checkGranularity(address) {
             return ((address >>> this._ignoreBits) << this._ignoreBits) === address;
@@ -929,7 +932,10 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryTyped", "ExidyMem
                 console.log('WARNING: handler granularity missmatch');
                 console.log(address.toString(16) + " " + length.toString(16));
             }
-            this.handlers.fill(handler, address >> this._ignoreBits, (address + length) >> this._ignoreBits);
+            const start = address >> this._ignoreBits;
+            const end = (address + length) >> this._ignoreBits;
+            this._typedHandlers.fill(handler, start, end);
+            this._handlers.fill(handler.memory(), start, end);
         }
         clearHandler(memoryType) {
             const address = memoryType.start;
@@ -943,8 +949,8 @@ define("ExidyMemorySystem", ["require", "exports", "ExidyMemoryTyped", "ExidyMem
             const regions = [];
             let start = null;
             let memoryType = null;
-            for (let i = 0; i < this.handlers.length + 1; ++i) {
-                const nextMemoryType = i < this.handlers.length ? this.handlers[i].memoryType() : null;
+            for (let i = 0; i < this._typedHandlers.length + 1; ++i) {
+                const nextMemoryType = i < this._typedHandlers.length ? this._typedHandlers[i].memoryType() : null;
                 const typeCode = memoryType ? memoryType.code : null;
                 const nextTypeCode = nextMemoryType ? nextMemoryType.code : null;
                 const address = i << this._ignoreBits;

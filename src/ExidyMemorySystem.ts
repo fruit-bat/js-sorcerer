@@ -17,21 +17,25 @@ class Multiplexor implements Memory {
 
     private _ignoreBits: number = 7;
 
-    private handlers: Array<MemoryTyped>;
+    private _typedHandlers: Array<MemoryTyped>;
+    private _handlers: Array<Memory>;
     private _nomem : MemoryTyped;
 
     public constructor(nomem: MemoryTyped) {
-        this.handlers = new Array<MemoryTyped>(MEMORY_SIZE_IN_BYTES >> this._ignoreBits);
-        this.handlers.fill(nomem);
+        const size = MEMORY_SIZE_IN_BYTES >> this._ignoreBits;
+        this._typedHandlers = new Array<MemoryTyped>(size);
+        this._handlers = new Array<Memory>(size);
+        this._typedHandlers.fill(nomem);
+        this._handlers.fill(nomem.memory());
         this._nomem = nomem;
     }
 
     readByte(address: number): number {
-        return this.handlers[address >>> this._ignoreBits].memory().readByte(address);
+        return this._handlers[address >>> this._ignoreBits].readByte(address);
     }
 
     writeByte(address: number, data: number): void {
-        this.handlers[address >>> this._ignoreBits].memory().writeByte(address, data);
+        this._handlers[address >>> this._ignoreBits].writeByte(address, data);
     }
 
     private checkGranularity(address: number): boolean {
@@ -43,10 +47,10 @@ class Multiplexor implements Memory {
           console.log('WARNING: handler granularity missmatch');
           console.log(address.toString(16) + " " + length.toString(16));
         }
-        this.handlers.fill(
-          handler,
-          address >> this._ignoreBits,
-          (address + length) >> this._ignoreBits);
+        const start = address >> this._ignoreBits;
+        const end = (address + length) >> this._ignoreBits;
+        this._typedHandlers.fill(handler, start, end);
+        this._handlers.fill(handler.memory(), start, end);
     }
 
     public clearHandler(memoryType: MemoryType): void {
@@ -66,8 +70,8 @@ class Multiplexor implements Memory {
         const regions: Array<MemoryRegion> = [];
         let start: number = null;
         let memoryType: MemoryType = null;
-        for (let i = 0; i < this.handlers.length + 1; ++i) {
-            const nextMemoryType = i < this.handlers.length ? this.handlers[i].memoryType() : null;
+        for (let i = 0; i < this._typedHandlers.length + 1; ++i) {
+            const nextMemoryType = i < this._typedHandlers.length ? this._typedHandlers[i].memoryType() : null;
             const typeCode = memoryType ? memoryType.code : null;
             const nextTypeCode = nextMemoryType ? nextMemoryType.code : null;
             const address: number = i << this._ignoreBits;
