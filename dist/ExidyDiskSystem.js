@@ -1,6 +1,5 @@
 'use strict';
 import ExidyDiskDrive from './ExidyDiskDrive';
-import MemoryTypes from './ExidyMemoryTypes';
 const MEM_DISK_REG_START = 0xBE00;
 const MEM_DISK_REG_LEN = 128;
 export default class ExidyDiskSystem {
@@ -152,8 +151,5 @@ export default class ExidyDiskSystem {
                 this._activeDriveNumber = 0x40;
             }
         }
-    }
-    memoryType() {
-        return MemoryTypes.DiskSystemInterface;
     }
 }

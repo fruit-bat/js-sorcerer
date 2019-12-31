@@ -1,23 +1,27 @@
 'use strict';
+import MemoryTyped from './ExidyMemoryTyped';
 import MemoryTypes from './ExidyMemoryTypes';
 import MemoryRegion from './ExidyMemoryRegion';
-import NoMemory from './ExidyMemoryNone';
 import { MEMORY_SIZE_IN_BYTES } from './ExidyMemory';
 import Ram from './ExidyMemoryRam';
 import Rom from './ExidyMemoryRom';
 import ExidyCharacters from './ExidyCharacters';
 import ExidyScreen from './ExidyScreen';
 class Multiplexor {
-    constructor() {
+    constructor(nomem) {
         this._ignoreBits = 7;
-        this.handlers = new Array(MEMORY_SIZE_IN_BYTES >> this._ignoreBits);
-        this.handlers.fill(new NoMemory());
+        const size = MEMORY_SIZE_IN_BYTES >> this._ignoreBits;
+        this._typedHandlers = new Array(size);
+        this._handlers = new Array(size);
+        this._typedHandlers.fill(nomem);
+        this._handlers.fill(nomem.memory());
+        this._nomem = nomem;
     }
     readByte(address) {
-        return this.handlers[address >>> this._ignoreBits].readByte(address);
+        return this._handlers[address >>> this._ignoreBits].readByte(address);
     }
     writeByte(address, data) {
-        this.handlers[address >>> this._ignoreBits].writeByte(address, data);
+        this._handlers[address >>> this._ignoreBits].writeByte(address, data);
     }
     checkGranularity(address) {
         return ((address >>> this._ignoreBits) << this._ignoreBits) === address;
@@ -27,12 +31,15 @@ class Multiplexor {
             console.log('WARNING: handler granularity missmatch');
             console.log(address.toString(16) + " " + length.toString(16));
         }
-        this.handlers.fill(handler, address >> this._ignoreBits, (address + length) >> this._ignoreBits);
+        const start = address >> this._ignoreBits;
+        const end = (address + length) >> this._ignoreBits;
+        this._typedHandlers.fill(handler, start, end);
+        this._handlers.fill(handler.memory(), start, end);
     }
     clearHandler(memoryType) {
         const address = memoryType.start;
         const length = memoryType.length;
-        this.fill(address, length, new NoMemory());
+        this.fill(address, length, this._nomem);
     }
     setHandler(handler, address, length) {
         this.fill(address == undefined ? handler.memoryType().start : address, length == undefined ? handler.memoryType().length : length, handler);
@@ -41,8 +48,8 @@ class Multiplexor {
         const regions = [];
         let start = null;
         let memoryType = null;
-        for (let i = 0; i < this.handlers.length + 1; ++i) {
-            const nextMemoryType = i < this.handlers.length ? this.handlers[i].memoryType() : null;
+        for (let i = 0; i < this._typedHandlers.length + 1; ++i) {
+            const nextMemoryType = i < this._typedHandlers.length ? this._typedHandlers[i].memoryType() : null;
             const typeCode = memoryType ? memoryType.code : null;
             const nextTypeCode = nextMemoryType ? nextMemoryType.code : null;
             const address = i << this._ignoreBits;
@@ -60,7 +67,6 @@ class Multiplexor {
 export default class MemorySystem {
     constructor() {
         this._memory = new Uint8Array(MEMORY_SIZE_IN_BYTES);
-        this.multiplexor = new Multiplexor();
         this._handlerMap = new Map();
         const charsCanvas = document.createElement('canvas');
         charsCanvas.width = 2048;
@@ -69,15 +75,18 @@ export default class MemorySystem {
         this.exidyCharacters = new ExidyCharacters(this._memory, charsCanvas, (char, row) => {
             this.exidyScreen.charUpdated(char, row);
         });
-        this._handlerMap[MemoryTypes.None.code] = new NoMemory();
-        this._handlerMap[MemoryTypes.Ram.code] = new Ram(this._memory, MemoryTypes.Ram);
-        this._handlerMap[MemoryTypes.DiskSystemRom.code] = new Rom(this._memory, MemoryTypes.DiskSystemRom);
-        this._handlerMap[MemoryTypes.RomPack8K.code] = new Rom(this._memory, MemoryTypes.RomPack8K);
-        this._handlerMap[MemoryTypes.MonitorRom.code] = new Rom(this._memory, MemoryTypes.MonitorRom);
-        this._handlerMap[MemoryTypes.VideoScratchRam.code] = new Ram(this._memory, MemoryTypes.VideoScratchRam);
-        this._handlerMap[MemoryTypes.ScreenRam.code] = this.exidyScreen;
-        this._handlerMap[MemoryTypes.AsciiCharacterRom.code] = new Rom(this._memory, MemoryTypes.AsciiCharacterRom);
-        this._handlerMap[MemoryTypes.UserCharacterRam.code] = this.exidyCharacters;
+        this._ram = new Ram(this._memory);
+        this._rom = new Rom(this._memory);
+        this._handlerMap[MemoryTypes.None.code] = new MemoryTyped(this._rom, MemoryTypes.None);
+        this._handlerMap[MemoryTypes.Ram.code] = new MemoryTyped(this._ram, MemoryTypes.Ram);
+        this._handlerMap[MemoryTypes.DiskSystemRom.code] = new MemoryTyped(this._rom, MemoryTypes.DiskSystemRom);
+        this._handlerMap[MemoryTypes.RomPack8K.code] = new MemoryTyped(this._rom, MemoryTypes.RomPack8K);
+        this._handlerMap[MemoryTypes.MonitorRom.code] = new MemoryTyped(this._rom, MemoryTypes.MonitorRom);
+        this._handlerMap[MemoryTypes.VideoScratchRam.code] = new MemoryTyped(this._ram, MemoryTypes.VideoScratchRam);
+        this._handlerMap[MemoryTypes.ScreenRam.code] = new MemoryTyped(this.exidyScreen, MemoryTypes.ScreenRam);
+        this._handlerMap[MemoryTypes.AsciiCharacterRom.code] = new MemoryTyped(this._rom, MemoryTypes.AsciiCharacterRom);
+        this._handlerMap[MemoryTypes.UserCharacterRam.code] = new MemoryTyped(this.exidyCharacters, MemoryTypes.UserCharacterRam);
+        this.multiplexor = new Multiplexor(this._handlerMap[MemoryTypes.None.code]);
         this.loadDefaults();
     }
     loadDefaults() {
@@ -107,7 +116,7 @@ export default class MemorySystem {
             throw new Error('ROM length mismatch');
         }
         this._memory.set(data, start);
-        this.multiplexor.setHandler(new Rom(this._memory, memoryType));
+        this.multiplexor.setHandler(new MemoryTyped(this._rom, memoryType));
     }
     loadMonitorRom(data) {
         this.loadRom(data, MemoryTypes.MonitorRom);
@@ -116,7 +125,7 @@ export default class MemorySystem {
         this.loadRom(data, MemoryTypes.DiskSystemRom);
     }
     loadDiskSystem(diskSystem) {
-        this.multiplexor.setHandler(diskSystem);
+        this.multiplexor.setHandler(new MemoryTyped(diskSystem, MemoryTypes.DiskSystemInterface));
     }
     loadAsciiCharacterRom(data) {
         this.loadRom(data, MemoryTypes.AsciiCharacterRom);
