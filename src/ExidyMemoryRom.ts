@@ -1,24 +1,19 @@
 'use strict';
 
-import MemoryTyped from './ExidyMemoryTyped';
-import MemoryType from './ExidyMemoryType';
+import Memory from './ExidyMemory';
 
-export default class Rom implements MemoryTyped {
+export default class Rom implements Memory {
 
-    private memory: Uint8Array;
+    private _memory: Uint8Array;
 
     public constructor(memory: Uint8Array) {
-        this.memory = memory;
+        this._memory = memory;
     }
 
     readByte(address: number): number {
-        return this.memory[address];
+        return this._memory[address];
     }
 
     writeByte(address: number, data: number): void {
-    }
-
-    memoryType(): MemoryType {
-      return MemoryType.Rom;
     }
 }

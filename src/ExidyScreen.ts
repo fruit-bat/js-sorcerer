@@ -3,7 +3,6 @@
 import Ram from './ExidyMemoryRam';
 import {SCREEN_START, SCREEN_SIZE_BYTES} from './ExidyMemory';
 
-
 export default class ExidyScreen extends Ram {
 
     private charsCanvas: HTMLCanvasElement;
@@ -13,7 +12,7 @@ export default class ExidyScreen extends Ram {
     public constructor(
         memory: Uint8Array,
         charsCanvas: HTMLCanvasElement) {
-        
+
         super(memory);
         this.screenCanvas = <HTMLCanvasElement>document.createElement('canvas');
         this.screenCanvas.width = 512;
@@ -40,7 +39,7 @@ export default class ExidyScreen extends Ram {
         const char = this.readByte(address);
         this.screenCtx.drawImage(this.charsCanvas, char << 3, 0, 8, 8, col << 3, row << 3, 8, 8);
     }
-       
+
     public charUpdated(updatedChar: number, updatedRow: number): void {
         for (let address = SCREEN_START; address < SCREEN_START + SCREEN_SIZE_BYTES; ++address) {
             const char = this.readByte(address);
@@ -49,14 +48,14 @@ export default class ExidyScreen extends Ram {
                 const row = index >> 6;
                 const col = index - (row << 6);
                 this.screenCtx.drawImage(
-                  this.charsCanvas, 
+                  this.charsCanvas,
                   char << 3,
                   updatedRow,
-                  8, 
-                  1, 
-                  col << 3, 
-                  (row << 3) + updatedRow, 
-                  8, 
+                  8,
+                  1,
+                  col << 3,
+                  (row << 3) + updatedRow,
+                  8,
                   1
                 );
             }

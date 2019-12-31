@@ -1,42 +1,60 @@
 'use strict';
+import MemoryTyped from './ExidyMemoryTyped';
+import MemoryTypes from './ExidyMemoryTypes';
 import MemoryRegion from './ExidyMemoryRegion';
-import NoMemory from './ExidyMemoryNone';
-import { MEMORY_SIZE_IN_BYTES, SCREEN_START, SCREEN_SIZE_BYTES } from './ExidyMemory';
+import { MEMORY_SIZE_IN_BYTES } from './ExidyMemory';
 import Ram from './ExidyMemoryRam';
 import Rom from './ExidyMemoryRom';
 import ExidyCharacters from './ExidyCharacters';
 import ExidyScreen from './ExidyScreen';
 class Multiplexor {
-    constructor() {
+    constructor(nomem) {
         this._ignoreBits = 7;
-        this.handlers = new Array(MEMORY_SIZE_IN_BYTES >> this._ignoreBits);
-        this.handlers.fill(new NoMemory());
+        const size = MEMORY_SIZE_IN_BYTES >> this._ignoreBits;
+        this._typedHandlers = new Array(size);
+        this._handlers = new Array(size);
+        this._typedHandlers.fill(nomem);
+        this._handlers.fill(nomem.memory());
+        this._nomem = nomem;
     }
     readByte(address) {
-        return this.handlers[address >>> this._ignoreBits].readByte(address);
+        return this._handlers[address >>> this._ignoreBits].readByte(address);
     }
     writeByte(address, data) {
-        this.handlers[address >>> this._ignoreBits].writeByte(address, data);
+        this._handlers[address >>> this._ignoreBits].writeByte(address, data);
     }
     checkGranularity(address) {
         return ((address >>> this._ignoreBits) << this._ignoreBits) === address;
     }
-    setHandler(address, length, handler) {
+    fill(address, length, handler) {
         if (!this.checkGranularity(address) || !this.checkGranularity(length)) {
             console.log('WARNING: handler granularity missmatch');
             console.log(address.toString(16) + " " + length.toString(16));
         }
-        this.handlers.fill(handler, address >> this._ignoreBits, (address + length) >> this._ignoreBits);
+        const start = address >> this._ignoreBits;
+        const end = (address + length) >> this._ignoreBits;
+        this._typedHandlers.fill(handler, start, end);
+        this._handlers.fill(handler.memory(), start, end);
+    }
+    clearHandler(memoryType) {
+        const address = memoryType.start;
+        const length = memoryType.length;
+        this.fill(address, length, this._nomem);
+    }
+    setHandler(handler, address, length) {
+        this.fill(address == undefined ? handler.memoryType().start : address, length == undefined ? handler.memoryType().length : length, handler);
     }
     getRegions() {
         const regions = [];
         let start = null;
         let memoryType = null;
-        for (let i = 0; i < this.handlers.length + 1; ++i) {
-            const nextMemoryType = i < this.handlers.length ? this.handlers[i].memoryType() : null;
+        for (let i = 0; i < this._typedHandlers.length + 1; ++i) {
+            const nextMemoryType = i < this._typedHandlers.length ? this._typedHandlers[i].memoryType() : null;
+            const typeCode = memoryType ? memoryType.code : null;
+            const nextTypeCode = nextMemoryType ? nextMemoryType.code : null;
             const address = i << this._ignoreBits;
-            if (nextMemoryType != memoryType) {
-                if (memoryType !== null) {
+            if (nextTypeCode != typeCode) {
+                if (typeCode !== null) {
                     regions.push(new MemoryRegion(memoryType, start, address - start));
                 }
                 start = address;
@@ -49,11 +67,7 @@ class Multiplexor {
 export default class MemorySystem {
     constructor() {
         this._memory = new Uint8Array(MEMORY_SIZE_IN_BYTES);
-        this.ram = new Ram(this._memory);
-        this.rom = new Rom(this._memory);
-        this.multiplexor = new Multiplexor();
-        this.multiplexor.setHandler(0, MEMORY_SIZE_IN_BYTES, this.ram);
-        this.multiplexor.setHandler(0xF800, 0xFE00 - 0xF800, this.rom);
+        this._handlerMap = new Map();
         const charsCanvas = document.createElement('canvas');
         charsCanvas.width = 2048;
         charsCanvas.height = 8;
@@ -61,22 +75,101 @@ export default class MemorySystem {
         this.exidyCharacters = new ExidyCharacters(this._memory, charsCanvas, (char, row) => {
             this.exidyScreen.charUpdated(char, row);
         });
-        this.multiplexor.setHandler(SCREEN_START, SCREEN_SIZE_BYTES, this.exidyScreen);
-        this.multiplexor.setHandler(0xFC00, 0x0400, this.exidyCharacters);
+        this._ram = new Ram(this._memory);
+        this._rom = new Rom(this._memory);
+        this._handlerMap[MemoryTypes.None.code] = new MemoryTyped(this._rom, MemoryTypes.None);
+        this._handlerMap[MemoryTypes.Ram.code] = new MemoryTyped(this._ram, MemoryTypes.Ram);
+        this._handlerMap[MemoryTypes.DiskSystemRom.code] = new MemoryTyped(this._rom, MemoryTypes.DiskSystemRom);
+        this._handlerMap[MemoryTypes.RomPack8K.code] = new MemoryTyped(this._rom, MemoryTypes.RomPack8K);
+        this._handlerMap[MemoryTypes.MonitorRom.code] = new MemoryTyped(this._rom, MemoryTypes.MonitorRom);
+        this._handlerMap[MemoryTypes.VideoScratchRam.code] = new MemoryTyped(this._ram, MemoryTypes.VideoScratchRam);
+        this._handlerMap[MemoryTypes.ScreenRam.code] = new MemoryTyped(this.exidyScreen, MemoryTypes.ScreenRam);
+        this._handlerMap[MemoryTypes.AsciiCharacterRom.code] = new MemoryTyped(this._rom, MemoryTypes.AsciiCharacterRom);
+        this._handlerMap[MemoryTypes.UserCharacterRam.code] = new MemoryTyped(this.exidyCharacters, MemoryTypes.UserCharacterRam);
+        this.multiplexor = new Multiplexor(this._handlerMap[MemoryTypes.None.code]);
+        this.loadDefaults();
+    }
+    loadDefaults() {
+        this.multiplexor.setHandler(this._handlerMap[MemoryTypes.None.code]);
+        this.multiplexor.setHandler(this._handlerMap[MemoryTypes.Ram.code]);
+        this.multiplexor.setHandler(this._handlerMap[MemoryTypes.VideoScratchRam.code]);
+        this.multiplexor.setHandler(this._handlerMap[MemoryTypes.ScreenRam.code]);
+        this.multiplexor.setHandler(this._handlerMap[MemoryTypes.UserCharacterRam.code]);
+    }
+    loadRegion(region) {
+        const handler = this._handlerMap[region.memoryType.code];
+        if (handler == undefined) {
+            throw new Error('Missing memory handler for type ' + region.memoryType.code);
+        }
+        this.multiplexor.setHandler(handler, region.start, region.length);
+    }
+    loadRegions(regions) {
+        regions.forEach(region => { this.loadRegion(region); });
     }
     get screenCanvas() {
         return this.exidyScreen.canvas;
     }
+    loadRom(data, memoryType) {
+        const start = memoryType.start;
+        const length = memoryType.length;
+        if (data.length !== length) {
+            throw new Error('ROM length mismatch');
+        }
+        this._memory.set(data, start);
+        this.multiplexor.setHandler(new MemoryTyped(this._rom, memoryType));
+    }
+    loadMonitorRom(data) {
+        this.loadRom(data, MemoryTypes.MonitorRom);
+    }
+    loadDiskSystemRom(data) {
+        this.loadRom(data, MemoryTypes.DiskSystemRom);
+    }
+    loadDiskSystem(diskSystem) {
+        this.multiplexor.setHandler(new MemoryTyped(diskSystem, MemoryTypes.DiskSystemInterface));
+    }
+    loadAsciiCharacterRom(data) {
+        this.loadRom(data, MemoryTypes.AsciiCharacterRom);
+    }
+    loadRomPack8K(data) {
+        this.loadRom(data, MemoryTypes.RomPack8K);
+    }
+    ejectRomPack8K() {
+        this.multiplexor.clearHandler(MemoryTypes.RomPack8K);
+        this._memory.fill(0, MemoryTypes.RomPack8K.start, MemoryTypes.RomPack8K.start + MemoryTypes.RomPack8K.length);
+    }
+    getSnp2RegionsSize() {
+        return 1 +
+            MemoryRegion.getSnp2Size() * this.getRegions().length;
+    }
+    saveSnp2Regions(data, address) {
+        const regions = this.getRegions();
+        data[address++] = regions.length;
+        for (let i = 0; i < regions.length; ++i) {
+            address += regions[i].saveSnp2(data, address);
+        }
+    }
+    loadSnp2Regions(data, address) {
+        const numberOfRegions = data[address++];
+        for (let i = 0; i < numberOfRegions; ++i) {
+            const region = MemoryRegion.loadSnp2(data, address);
+            this.loadRegion(region);
+            address += MemoryRegion.getSnp2Size();
+        }
+    }
+    getSnp2Size() {
+        return this._memory.length + this.getSnp2RegionsSize();
+    }
+    saveSnp2(data, address) {
+        data.set(this._memory, address);
+        this.saveSnp2Regions(data, address + this._memory.length);
+    }
+    loadSnp2(data, address) {
+        const regionsAddress = address + MEMORY_SIZE_IN_BYTES;
+        this._memory.set(data.subarray(address, regionsAddress));
+        this.loadSnp2Regions(data, regionsAddress);
+    }
     load(data, address, start = 0) {
         this._memory.set(data.subarray(start), address);
-    }
-    loadRom(data, address) {
-        this._memory.set(data, address);
-        this.multiplexor.setHandler(address, data.length, this.rom);
-    }
-    ejectRom(address, length) {
-        this.multiplexor.setHandler(address, length, this.ram);
-        this._memory.fill(0, address, address + length);
     }
     get memory() {
         return this.multiplexor;
@@ -86,9 +179,6 @@ export default class MemorySystem {
     }
     updateScreen() {
         this.exidyScreen.updateAll();
-    }
-    setHandler(address, length, handler) {
-        this.multiplexor.setHandler(address, length, handler);
     }
     getMem(start, length) {
         return this._memory.subarray(start, start + length);

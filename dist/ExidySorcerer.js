@@ -9,12 +9,6 @@ import ExidyDiskSystem from './ExidyDiskSystem';
 import TapeSystem from './ExidyTapeSystem';
 import ArrayTape from './ExidyArrayTape';
 import CentronicsSystem from './ExidyCentronicsSystem';
-const defaultRoms = [
-    { name: 'exmo1-1.dat', address: 0xE000 },
-    { name: 'exmo1-2.dat', address: 0xE800 },
-    { name: 'exchr-1.dat', address: 0xF800 },
-    { name: 'diskboot.dat', address: 0xBC00 }
-];
 const CYCLES_PER_DISK_TICK = 100000;
 export default class ExidySorcerer {
     constructor(filesystem) {
@@ -35,11 +29,17 @@ export default class ExidySorcerer {
         this.io.input.setHandler(0xFF, this.centronicsSystem);
         this.io.output.addHandler(0xFF, this.centronicsSystem);
         this.cpu = new Z80(this.memorySystem.memory, this.io.input, this.io.output);
-        this.ready = Promise.all(defaultRoms.map((romConfig) => {
-            return filesystem.read('roms/' + romConfig.name).then((data) => {
-                this.memorySystem.loadRom(data, romConfig.address);
-            });
-        })).then(() => {
+        this.ready = Promise.all([
+            this.readMonitorRom().then(data => {
+                this.memorySystem.loadMonitorRom(data);
+            }),
+            this.readRom('exchr-1.dat').then(data => {
+                this.memorySystem.loadAsciiCharacterRom(data);
+            }),
+            this.readRom('diskboot.dat').then(data => {
+                this.memorySystem.loadDiskSystemRom(data);
+            })
+        ]).then(() => {
             this.diskSystem = new ExidyDiskSystem(this.memorySystem);
         }).then(() => {
             this.memorySystem.updateCharacters();
@@ -50,6 +50,20 @@ export default class ExidySorcerer {
             this.loadSnpFromArray(new Uint8Array(buffer));
         });
     }
+    readRom(name) {
+        return this.filesystem.read('roms/' + name);
+    }
+    readMonitorRom() {
+        return Promise.all([this.readRom('exmo1-1.dat'), this.readRom('exmo1-2.dat')])
+            .then(p => {
+            const p1 = p[0];
+            const p2 = p[1];
+            const b = new Uint8Array(p1.length + p2.length);
+            b.set(p1, 0);
+            b.set(p2, p1.length);
+            return b;
+        });
+    }
     get keyboard() {
         return this._keyboard;
     }
@@ -57,10 +71,10 @@ export default class ExidySorcerer {
         return this.memorySystem.screenCanvas;
     }
     ejectRom() {
-        this.memorySystem.ejectRom(0xc000, 0x2000);
+        this.memorySystem.ejectRomPack8K();
     }
     loadRomFromArray(data) {
-        this.memorySystem.loadRom(data, 0xC000);
+        this.memorySystem.loadRomPack8K(data);
     }
     loadSnpFromArray(data) {
         this.memorySystem.load(data, 0x0000, 28);

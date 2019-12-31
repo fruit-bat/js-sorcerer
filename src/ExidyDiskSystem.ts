@@ -2,15 +2,14 @@
 
 import ExidyDisk from './ExidyDisk';
 import ExidyDiskDrive from './ExidyDiskDrive';
-import MemoryTyped from './ExidyMemoryTyped';
-import MemoryType from './ExidyMemoryType';
+import Memory from './ExidyMemory';
 import MemorySystem from './ExidyMemorySystem';
 
 const MEM_DISK_REG_START = 0xBE00;
 const MEM_DISK_REG_LEN = 128;
 
 
-export default class ExidyDiskSystem implements MemoryTyped {
+export default class ExidyDiskSystem implements Memory {
 
     private _drives = new Array<ExidyDiskDrive>(4);
     private _activeDrive: ExidyDiskDrive = null;
@@ -21,7 +20,7 @@ export default class ExidyDiskSystem implements MemoryTyped {
             this._drives[ i ] = new ExidyDiskDrive(i);
         }
 
-        memorySystem.setHandler(MEM_DISK_REG_START, MEM_DISK_REG_LEN, this);
+        memorySystem.loadDiskSystem(this);
     }
 
     public getDiskDrive(drive: number): ExidyDiskDrive {
@@ -145,9 +144,5 @@ export default class ExidyDiskSystem implements MemoryTyped {
                 this._activeDriveNumber = 0x40;
             }
         }
-    }
-
-    memoryType(): MemoryType {
-      return MemoryType.None;
     }
 }
